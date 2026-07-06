@@ -1,0 +1,19 @@
+Backend Engineer — Initech (San Jose, CA)
+
+We are looking for a Backend Engineer to design and build the services that power
+our analytics platform.
+
+What you'll do:
+- Design, build, and operate REST APIs and microservices
+- Own PostgreSQL schema design and query performance
+- Improve our CI/CD pipelines and deployment automation
+
+Requirements:
+- 2+ years of professional experience with Python
+- Strong SQL and PostgreSQL experience
+- Experience designing REST APIs
+
+Nice to have:
+- Docker and Kubernetes
+- Streaming systems (Kafka)
+- AWS

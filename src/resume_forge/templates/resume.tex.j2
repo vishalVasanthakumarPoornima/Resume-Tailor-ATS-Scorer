@@ -1,0 +1,80 @@
+% ATS-friendly resume: single column, standard fonts, real text only.
+% No graphics, no multi-column, no tables for content.
+\documentclass[10.5pt]{article}
+\usepackage[margin=0.55in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage[hidelinks]{hyperref}
+\usepackage{parskip}
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+\titleformat{\section}{\large\bfseries\scshape}{}{0em}{}[\vspace{-6pt}\rule{\textwidth}{0.4pt}]
+\titlespacing*{\section}{0pt}{8pt}{4pt}
+\setlist[itemize]{leftmargin=1.1em, itemsep=1pt, parsep=0pt, topsep=2pt, label=\textbullet}
+
+\begin{document}
+
+\begin{center}
+    {\LARGE\bfseries \VAR{r.contact.name | tex}}\\[3pt]
+    \VAR{contact_line}
+\end{center}
+
+\BLOCK{if r.summary}
+\section*{Summary}
+\VAR{r.summary | tex}
+\BLOCK{endif}
+
+\BLOCK{if r.skills}
+\section*{Skills}
+\BLOCK{for group in r.skills}
+\textbf{\VAR{group.category | tex}:} \VAR{group.items | map('tex') | join(', ')}\\
+\BLOCK{endfor}
+\BLOCK{endif}
+
+\BLOCK{if r.experience}
+\section*{Experience}
+\BLOCK{for item in r.experience}
+\textbf{\VAR{item.title | tex}} --- \VAR{item.company | tex}\BLOCK{if item.location}, \VAR{item.location | tex}\BLOCK{endif} \hfill \VAR{[item.start, item.end] | select | map('tex') | join(' -- ')}
+\BLOCK{if item.bullets}
+\begin{itemize}
+\BLOCK{for bullet in item.bullets}
+    \item \VAR{bullet | tex}
+\BLOCK{endfor}
+\end{itemize}
+\BLOCK{endif}
+\BLOCK{endfor}
+\BLOCK{endif}
+
+\BLOCK{if r.projects}
+\section*{Projects}
+\BLOCK{for project in r.projects}
+\textbf{\VAR{project.name | tex}}\BLOCK{if project.technologies} --- \textit{\VAR{project.technologies | map('tex') | join(', ')}}\BLOCK{endif}\BLOCK{if project.link} \hfill \VAR{project.link | tex}\BLOCK{endif}
+\BLOCK{if project.bullets}
+\begin{itemize}
+\BLOCK{for bullet in project.bullets}
+    \item \VAR{bullet | tex}
+\BLOCK{endfor}
+\end{itemize}
+\BLOCK{endif}
+\BLOCK{endfor}
+\BLOCK{endif}
+
+\BLOCK{if r.education}
+\section*{Education}
+\BLOCK{for school in r.education}
+\textbf{\VAR{school.institution | tex}}\BLOCK{if school.location}, \VAR{school.location | tex}\BLOCK{endif} \hfill \VAR{[school.start, school.end] | select | map('tex') | join(' -- ')}\\
+\BLOCK{if school.degree}\VAR{school.degree | tex}\BLOCK{if school.field} in \VAR{school.field | tex}\BLOCK{endif}\BLOCK{if school.gpa} (GPA: \VAR{school.gpa | tex})\BLOCK{endif}\\\BLOCK{endif}
+\BLOCK{for detail in school.details}
+\VAR{detail | tex}\\
+\BLOCK{endfor}
+\BLOCK{endfor}
+\BLOCK{endif}
+
+\BLOCK{if r.certifications}
+\section*{Certifications}
+\VAR{r.certifications | map('tex') | join(' $|$ ')}
+\BLOCK{endif}
+
+\end{document}

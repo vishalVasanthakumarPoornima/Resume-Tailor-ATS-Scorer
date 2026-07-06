@@ -1,0 +1,24 @@
+Jordan Rivera
+San Jose, CA | (408) 555-0192 | jordan.rivera@example.com | github.com/jrivera
+
+SUMMARY
+Software engineer with 3 years building backend services in Python.
+
+SKILLS
+Languages: Python, SQL, Go
+Tools: Docker, PostgreSQL, AWS
+
+EXPERIENCE
+Software Engineer — Acme Analytics, San Jose, CA (Jun 2022 - Present)
+- Built REST APIs in Python serving 2M requests/day
+- Reduced query latency 40% by adding PostgreSQL indexes
+
+PROJECTS
+LogPipe (Python, Kafka)
+- Developed a streaming log processor handling 50k events/sec
+
+EDUCATION
+San Jose State University — B.S. Computer Science, 2022
+
+CERTIFICATIONS
+AWS Certified Developer
