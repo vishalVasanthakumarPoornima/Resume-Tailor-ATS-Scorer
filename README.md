@@ -4,11 +4,12 @@ Given a job posting (URL or pasted text) and your existing resume, **resume-forg
 ATS-optimized, LaTeX-generated PDF resume tailored to that job, iterating against a **local ATS
 scorer** until it scores ≥ 80 (configurable), and returns the PDF plus a JSON score report.
 
-Three layers, all in this repo:
+Four layers, all in this repo:
 
 1. **`resume_forge`** — a core Python package with a clean programmatic API
-2. **MCP server** — exposes the pipeline as tools so agents/Claude can call it
-3. **CLI** — `resume-forge --job <url|-> --resume <path> --out <dir>`
+2. **Web app** — FastAPI backend + React frontend (upload, live progress, animated score report)
+3. **MCP server** — exposes the pipeline as tools so agents/Claude can call it
+4. **CLI** — `resume-forge --job <url|-> --resume <path> --out <dir>`
 
 **No fabrication, by design.** Tailoring = emphasis + rewording + keyword alignment. The tailoring
 prompt forbids inventing employers, titles, dates, degrees, certifications, or metrics — and a
@@ -49,6 +50,24 @@ export RESUME_FORGE_LLM_BACKEND=anthropic ANTHROPIC_API_KEY=sk-ant-...
 
 Model/backend knobs (see `.env.example`): `RESUME_FORGE_LLM_BACKEND` (`ollama` default |
 `anthropic`), `RESUME_FORGE_MODEL`, `OLLAMA_HOST`, `RESUME_FORGE_OLLAMA_NUM_CTX`.
+
+## Web app
+
+```bash
+# terminal 1 — backend (FastAPI on :8756)
+uv run resume-forge-server --port 8756
+
+# terminal 2 — frontend (Vite dev server on :5173, proxies /api to the backend)
+cd frontend && npm install && npm run dev
+```
+
+Open http://localhost:5173: drag in your resume (or click "Try the sample"), paste a JD or
+posting URL, set the target score, and hit **Forge**. You get a live progress stepper while the
+pipeline runs, then an animated score dial, per-dimension breakdown, missing-keyword chips, and
+one-click PDF/.tex downloads. The UI uses [React Bits](https://reactbits.dev) components
+(Aurora background, SplitText, ShinyText, SpotlightCard, CountUp) over Tailwind.
+
+If the backend runs on a different port: `BACKEND_PORT=<port> npm run dev`.
 
 ## CLI
 
@@ -188,6 +207,8 @@ src/resume_forge/
   pipeline.py      # steps 7-8: optimize loop + forge() entry point
   cli.py           # CLI
   mcp_server.py    # MCP server (FastMCP, stdio)
+  server.py        # FastAPI backend for the web app (background jobs + progress polling)
   templates/resume.tex.j2   # ATS-friendly template: single column, no graphics/tables
+frontend/          # React + Vite + Tailwind web UI (React Bits components in src/blocks/)
 tests/             # pytest suite, fully offline
 ```

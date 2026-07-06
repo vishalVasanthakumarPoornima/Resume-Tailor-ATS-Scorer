@@ -44,6 +44,7 @@ def optimize(
     render_fn=None,
     compile_fn=None,
     score_fn=None,
+    on_progress=None,
 ) -> ForgeResult:
     """Tailor → render → compile → score, iterating on scorer feedback until
     ``target_score`` is reached or ``max_iterations`` is exhausted.
@@ -66,6 +67,8 @@ def optimize(
 
     for iteration in range(1, max_iterations + 1):
         iterations = iteration
+        if on_progress:
+            on_progress({"stage": "tailoring", "iteration": iteration, "max_iterations": max_iterations})
         tailored = tailor_fn(profile, job, feedback)
         _, violations = tailor_module.enforce_no_fabrication(tailored, profile)
         notes.extend(f"iteration {iteration}: {v}" for v in violations)
@@ -76,6 +79,9 @@ def optimize(
 
         if best is None or report.score > best[0]:
             best = (report.score, Path(pdf_path), Path(tex_path), report)
+
+        if on_progress:
+            on_progress({"stage": "scored", "iteration": iteration, "score": report.score})
 
         if report.score >= target_score:
             break
