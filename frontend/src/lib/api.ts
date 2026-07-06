@@ -59,3 +59,4 @@ export async function getHealth(): Promise<Health> {
 
 export const pdfUrl = (id: string) => `/api/jobs/${id}/pdf`
 export const texUrl = (id: string) => `/api/jobs/${id}/tex`
+export const reportUrl = (id: string) => `/api/jobs/${id}/report`

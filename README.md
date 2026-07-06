@@ -4,6 +4,8 @@ Given a job posting (URL or pasted text) and your existing resume, **resume-forg
 ATS-optimized, LaTeX-generated PDF resume tailored to that job, iterating against a **local ATS
 scorer** until it scores ≥ 80 (configurable), and returns the PDF plus a JSON score report.
 
+![resume-forge web UI](docs/screenshot.png)
+
 Four layers, all in this repo:
 
 1. **`resume_forge`** — a core Python package with a clean programmatic API
@@ -76,6 +78,13 @@ one-click PDF/.tex downloads. The UI uses [React Bits](https://reactbits.dev) co
 (Aurora background, SplitText, ShinyText, SpotlightCard, CountUp) over Tailwind.
 
 If the backend runs on a different port: `BACKEND_PORT=<port> npm run dev`.
+
+**Production mode (single command):** build the frontend once and the backend serves it directly —
+
+```bash
+cd frontend && npm install && npm run build && cd ..
+uv run resume-forge-server --port 8756   # whole app at http://127.0.0.1:8756
+```
 
 ## CLI
 

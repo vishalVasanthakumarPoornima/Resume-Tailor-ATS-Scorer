@@ -180,6 +180,18 @@ def job_tex(job_id: str):
     return _artifact(job_id, "tex_path", "application/x-tex", "resume_tailored.tex")
 
 
+@app.get("/api/jobs/{job_id}/report")
+def job_report(job_id: str):
+    job = _get_job(job_id)
+    result = job.get("result")
+    if not result:
+        raise HTTPException(409, "Job has not finished yet")
+    report_path = Path(result["pdf_path"]).parent / "score_report.json"
+    if not report_path.exists():
+        raise HTTPException(410, "Report no longer exists on disk")
+    return FileResponse(report_path, media_type="application/json", filename="score_report.json")
+
+
 @app.get("/api/health")
 def health():
     info: dict = {"status": "ok"}
@@ -191,6 +203,16 @@ def health():
         info["status"] = "degraded"
         info["llm_error"] = str(exc)
     return info
+
+
+# Production mode: if the frontend has been built (cd frontend && npm run build),
+# serve it from this process so `resume-forge-server` alone runs the whole app.
+# Mounted last so /api/* routes always win.
+FRONTEND_DIST = Path(__file__).parent.parent.parent / "frontend" / "dist"
+if FRONTEND_DIST.is_dir():
+    from fastapi.staticfiles import StaticFiles
+
+    app.mount("/", StaticFiles(directory=FRONTEND_DIST, html=True), name="frontend")
 
 
 def main() -> None:

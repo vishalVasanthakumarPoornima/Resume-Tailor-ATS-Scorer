@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { JobStatus } from '../lib/api'
-import { pdfUrl, texUrl } from '../lib/api'
+import { pdfUrl, reportUrl, texUrl } from '../lib/api'
 import CountUp from '../blocks/CountUp'
 import SpotlightCard from '../blocks/SpotlightCard'
 
@@ -76,6 +76,13 @@ export default function ResultsView({ job, onReset }: { job: JobStatus; onReset:
                 className="rounded-xl border border-zinc-700 px-6 py-2.5 text-sm font-medium text-zinc-300 transition-colors hover:border-zinc-500"
               >
                 .tex source
+              </a>
+              <a
+                href={reportUrl(job.id)}
+                download
+                className="rounded-xl border border-zinc-700 px-6 py-2.5 text-sm font-medium text-zinc-300 transition-colors hover:border-zinc-500"
+              >
+                report.json
               </a>
               <button
                 onClick={onReset}
