@@ -84,3 +84,66 @@ class TestExtractJob:
     def test_too_short_pasted_text_rejected(self, sample_job):
         with pytest.raises(JobFetchError, match="too short"):
             extract_job("python dev", llm=_fake_llm(sample_job))
+
+
+class TestBrowserFallback:
+    """The Playwright path is exercised via monkeypatching — no real browser in CI."""
+
+    def _failing_client(self):
+        return _mock_client(lambda request: httpx.Response(500))
+
+    def test_browser_recovers_js_heavy_page(self, sample_job, monkeypatch):
+        import resume_forge.jobs as jobs_module
+
+        monkeypatch.setattr(jobs_module, "_browser_available", lambda: True)
+        monkeypatch.setattr(jobs_module, "fetch_job_posting_browser", lambda url: JD_TEXT)
+
+        llm = _fake_llm(sample_job)
+        job = extract_job("https://jobs.example.com/1", llm=llm, http_client=self._failing_client())
+        assert job.title == "Backend Engineer"
+        assert "PostgreSQL" in llm.calls[0]["prompt"]  # browser text was analyzed
+
+    def test_browser_failure_falls_through_to_pasted_text(self, sample_job, monkeypatch):
+        import resume_forge.jobs as jobs_module
+
+        def browser_fails(url):
+            raise JobFetchError("bot wall")
+
+        monkeypatch.setattr(jobs_module, "_browser_available", lambda: True)
+        monkeypatch.setattr(jobs_module, "fetch_job_posting_browser", browser_fails)
+
+        job = extract_job(
+            "https://jobs.example.com/1",
+            job_description_text=JD_TEXT,
+            llm=_fake_llm(sample_job),
+            http_client=self._failing_client(),
+        )
+        assert job.title == "Backend Engineer"
+
+    def test_use_browser_false_skips_playwright(self, sample_job, monkeypatch):
+        import resume_forge.jobs as jobs_module
+
+        def must_not_be_called(url):  # pragma: no cover
+            raise AssertionError("browser fetch should have been skipped")
+
+        monkeypatch.setattr(jobs_module, "_browser_available", lambda: True)
+        monkeypatch.setattr(jobs_module, "fetch_job_posting_browser", must_not_be_called)
+
+        with pytest.raises(JobFetchError):
+            extract_job(
+                "https://jobs.example.com/1",
+                llm=_fake_llm(sample_job),
+                http_client=self._failing_client(),
+                use_browser=False,
+            )
+
+    def test_playwright_missing_gives_install_hint(self, sample_job, monkeypatch):
+        import resume_forge.jobs as jobs_module
+
+        monkeypatch.setattr(jobs_module, "_browser_available", lambda: False)
+        with pytest.raises(JobFetchError, match="uv sync --extra browser"):
+            extract_job(
+                "https://jobs.example.com/1",
+                llm=_fake_llm(sample_job),
+                http_client=self._failing_client(),
+            )

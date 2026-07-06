@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import re
 from pathlib import Path
 
 from .exceptions import IngestError
@@ -11,7 +12,7 @@ from .llm import LLM, default_llm
 from .models import MasterProfile
 
 # Bump when the parsing prompt or schema changes so stale caches are ignored.
-PARSE_VERSION = "1"
+PARSE_VERSION = "2"
 
 INGEST_SYSTEM = """You are an expert resume parser. Extract the candidate's resume into the \
 provided schema, faithfully and completely.
@@ -63,6 +64,29 @@ def extract_resume_text(path: str | Path) -> str:
     return text
 
 
+_LINKEDIN_RE = re.compile(r"(?:www\.)?linkedin\.com/in/[\w-]+", re.IGNORECASE)
+_GITHUB_RE = re.compile(r"(?:www\.)?github\.com/[\w-]+", re.IGNORECASE)
+
+
+def _backfill_contact(profile: MasterProfile, text: str) -> MasterProfile:
+    """Deterministically recover contact fields a (small) model may have dropped.
+
+    Contact info is regex-detectable, so we never rely on the LLM alone for it.
+    """
+    from .ats import EMAIL_RE, PHONE_RE
+
+    contact = profile.contact
+    if not contact.email and (match := EMAIL_RE.search(text)):
+        contact.email = match.group(0)
+    if not contact.phone and (match := PHONE_RE.search(text)):
+        contact.phone = match.group(0).strip()
+    if not contact.linkedin and (match := _LINKEDIN_RE.search(text)):
+        contact.linkedin = match.group(0)
+    if not contact.github and (match := _GITHUB_RE.search(text)):
+        contact.github = match.group(0)
+    return profile
+
+
 def _cache_key(path: Path) -> str:
     digest = hashlib.sha256()
     digest.update(PARSE_VERSION.encode())
@@ -95,6 +119,7 @@ def ingest_master_resume(
         prompt=f"Parse this resume into the schema:\n\n<resume>\n{text}\n</resume>",
         output_type=MasterProfile,
     )
+    profile = _backfill_contact(profile, text)
 
     cache_dir.mkdir(parents=True, exist_ok=True)
     cache_file.write_text(profile.model_dump_json(indent=2), encoding="utf-8")

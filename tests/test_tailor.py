@@ -1,7 +1,7 @@
-"""No-fabrication guard tests."""
+"""No-fabrication guard and truthful-skill backfill tests."""
 
-from resume_forge.models import EducationItem, ExperienceItem
-from resume_forge.tailor import enforce_no_fabrication
+from resume_forge.models import EducationItem, ExperienceItem, Job, SkillGroup
+from resume_forge.tailor import backfill_truthful_skills, enforce_no_fabrication
 
 
 class TestEnforceNoFabrication:
@@ -37,3 +37,33 @@ class TestEnforceNoFabrication:
         cleaned, violations = enforce_no_fabrication(sample_tailored, sample_profile)
         assert violations == []
         assert cleaned.experience[0].bullets == ["Engineered Python microservices at scale"]
+
+
+class TestBackfillTruthfulSkills:
+    def test_dropped_profile_skill_from_jd_is_restored(self, sample_tailored, sample_profile, sample_job):
+        # Model over-trimmed: Docker (in profile AND in JD preferred) got dropped
+        sample_tailored.skills = [SkillGroup(category="Languages", items=["Python", "SQL"])]
+        result, added = backfill_truthful_skills(sample_tailored, sample_profile, sample_job)
+        assert "Docker" in added
+        tools = next(g for g in result.skills if g.category == "Tools")
+        assert "Docker" in tools.items
+
+    def test_never_adds_skill_absent_from_profile(self, sample_tailored, sample_profile, sample_job):
+        # Kubernetes is in the JD but NOT in the profile — must never be backfilled
+        sample_tailored.skills = []
+        result, added = backfill_truthful_skills(sample_tailored, sample_profile, sample_job)
+        all_items = [item for g in result.skills for item in g.items]
+        assert "Kubernetes" not in all_items
+        assert "Kubernetes" not in added
+
+    def test_no_change_when_skills_already_present(self, sample_tailored, sample_profile, sample_job):
+        result, added = backfill_truthful_skills(sample_tailored, sample_profile, sample_job)
+        assert added == []
+        assert result.skills == sample_tailored.skills
+
+    def test_skill_mentioned_in_bullets_counts_as_present(self, sample_tailored, sample_profile):
+        job = Job(title="X", required_skills=["PostgreSQL"])
+        sample_tailored.skills = []  # not in the skills section...
+        # ...but the bullet "Reduced query latency 40% by adding PostgreSQL indexes" covers it
+        result, added = backfill_truthful_skills(sample_tailored, sample_profile, job)
+        assert added == []

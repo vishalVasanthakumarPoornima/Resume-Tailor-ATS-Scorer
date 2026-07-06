@@ -26,6 +26,21 @@ class TestExtractText:
             extract_resume_text(bad)
 
 
+class TestContactBackfill:
+    def test_dropped_contact_recovered_from_text(self, sample_profile, tmp_path):
+        # Simulate a small model losing email/phone during parsing
+        lossy = sample_profile.model_copy(deep=True)
+        lossy.contact.email = None
+        lossy.contact.phone = None
+        llm = FakeLLM({MasterProfile: lossy})
+
+        profile = ingest_master_resume(
+            FIXTURES / "sample_resume.txt", llm=llm, cache_dir=tmp_path
+        )
+        assert profile.contact.email == "jordan.rivera@example.com"
+        assert "555-0192" in profile.contact.phone
+
+
 class TestCaching:
     def test_second_call_uses_cache_not_llm(self, sample_profile, tmp_path):
         llm = FakeLLM({MasterProfile: sample_profile})

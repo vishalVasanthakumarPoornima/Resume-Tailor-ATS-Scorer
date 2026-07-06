@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 
 from .llm import LLM, default_llm
-from .models import Job, MasterProfile, TailoredResume
+from .models import Job, MasterProfile, SkillGroup, TailoredResume
 
 NO_FABRICATION_RULE = """HARD RULE — NO FABRICATION:
 Only use facts present in the master profile. NEVER invent or alter employers, job titles,
@@ -69,11 +69,51 @@ def tailor(
     )
     tailored = llm.parse(system=TAILOR_SYSTEM, prompt=prompt, output_type=TailoredResume)
     cleaned, _ = enforce_no_fabrication(tailored, profile)
+    cleaned, _ = backfill_truthful_skills(cleaned, profile, job)
     return cleaned
 
 
 def _norm(value: str | None) -> str:
     return (value or "").strip().casefold()
+
+
+def backfill_truthful_skills(
+    tailored: TailoredResume, profile: MasterProfile, job: Job
+) -> tuple[TailoredResume, list[str]]:
+    """Re-add job-relevant skills the model dropped — but ONLY ones the master
+    profile already lists, so this can never fabricate.
+
+    Small local models sometimes over-trim the skills section; this guarantees a
+    skill that is both in the JD and in the master profile survives tailoring.
+    """
+    from .ats import keyword_found
+
+    profile_skills: dict[str, tuple[str, str]] = {}  # normalized item -> (category, item)
+    for group in profile.skills:
+        for item in group.items:
+            profile_skills.setdefault(_norm(item), (group.category, item))
+
+    tailored_text = tailored.model_dump_json().lower()
+    job_terms = job.required_skills + job.preferred_skills + job.keywords
+
+    skills = [group.model_copy(deep=True) for group in tailored.skills]
+    added: list[str] = []
+    for term in job_terms:
+        key = _norm(term)
+        if key not in profile_skills or keyword_found(tailored_text, term):
+            continue
+        category, item = profile_skills[key]
+        target = next((g for g in skills if _norm(g.category) == _norm(category)), None)
+        if target is None:
+            target = SkillGroup(category=category, items=[])
+            skills.append(target)
+        if all(_norm(existing) != key for existing in target.items):
+            target.items.append(item)
+            added.append(item)
+
+    if not added:
+        return tailored, []
+    return tailored.model_copy(update={"skills": skills}), added
 
 
 def enforce_no_fabrication(

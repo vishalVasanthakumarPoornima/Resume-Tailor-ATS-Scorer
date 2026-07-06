@@ -19,9 +19,9 @@ from .exceptions import (
     ResumeForgeError,
 )
 from .ingest import extract_resume_text, ingest_master_resume
-from .jobs import extract_job, fetch_job_posting
+from .jobs import extract_job, fetch_job_posting, fetch_job_posting_browser
 from .latex import compile_pdf, escape_latex, render_tex
-from .llm import AnthropicLLM, LLM
+from .llm import LLM, AnthropicLLM, OllamaLLM, default_llm
 from .models import (
     Contact,
     EducationItem,
@@ -52,17 +52,20 @@ __all__ = [
     "LLMError",
     "LatexError",
     "MasterProfile",
+    "OllamaLLM",
     "ProjectItem",
     "ResumeForgeError",
     "ScoreReport",
     "SkillGroup",
     "TailoredResume",
     "compile_pdf",
+    "default_llm",
     "enforce_no_fabrication",
     "escape_latex",
     "extract_job",
     "extract_resume_text",
     "fetch_job_posting",
+    "fetch_job_posting_browser",
     "forge",
     "ingest_master_resume",
     "optimize",

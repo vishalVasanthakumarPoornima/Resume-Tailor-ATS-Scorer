@@ -118,11 +118,17 @@ def forge(
     max_iterations: int = DEFAULT_MAX_ITERATIONS,
     job_description_text: str | None = None,
     llm: LLM | None = None,
+    use_browser: bool = True,
 ) -> ForgeResult:
     """End-to-end: ingest resume + extract job + optimize. The one-call API."""
     llm = llm or default_llm()
     profile = ingest_master_resume(resume_path, llm=llm)
-    job = extract_job(job_url_or_text, job_description_text=job_description_text, llm=llm)
+    job = extract_job(
+        job_url_or_text,
+        job_description_text=job_description_text,
+        llm=llm,
+        use_browser=use_browser,
+    )
     return optimize(
         profile,
         job,

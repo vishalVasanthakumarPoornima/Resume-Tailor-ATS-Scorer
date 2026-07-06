@@ -34,7 +34,20 @@ def build_parser() -> argparse.ArgumentParser:
         default=DEFAULT_MAX_ITERATIONS,
         help="Max tailor/score iterations (default: 5).",
     )
-    parser.add_argument("--model", help="Override the Anthropic model id.")
+    parser.add_argument(
+        "--backend",
+        choices=["ollama", "anthropic"],
+        help="LLM backend (default: env RESUME_FORGE_LLM_BACKEND, or local ollama).",
+    )
+    parser.add_argument(
+        "--model",
+        help="Model id for the backend (e.g. 'llama3.1:8b-instruct-q4_K_M' or 'claude-opus-4-8').",
+    )
+    parser.add_argument(
+        "--no-browser",
+        action="store_true",
+        help="Skip the headless-browser fallback for JS-heavy job pages.",
+    )
     parser.add_argument("--no-cache", action="store_true", help="Re-parse the master resume, ignoring the cache.")
     return parser
 
@@ -53,11 +66,13 @@ def main(argv: list[str] | None = None) -> int:
     if args.job_text:
         job_text_fallback = Path(args.job_text).read_text(encoding="utf-8")
 
-    llm = None
-    if args.model:
-        from .llm import AnthropicLLM
+    from .llm import default_llm
 
-        llm = AnthropicLLM(model=args.model)
+    try:
+        llm = default_llm(args.backend, args.model)
+    except ResumeForgeError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
 
     if args.no_cache:
         # forge() caches by file content; bypass by ingesting explicitly first
@@ -74,6 +89,7 @@ def main(argv: list[str] | None = None) -> int:
             max_iterations=args.max_iterations,
             job_description_text=job_text_fallback,
             llm=llm,
+            use_browser=not args.no_browser,
         )
     except ResumeForgeError as exc:
         print(f"error: {exc}", file=sys.stderr)

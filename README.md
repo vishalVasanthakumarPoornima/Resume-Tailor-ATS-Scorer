@@ -17,22 +17,38 @@ doesn't exist in your master resume, and always restores your real contact info.
 
 ## Setup
 
-Requirements: Python 3.11+, [`uv`](https://docs.astral.sh/uv/), and a LaTeX engine —
-[`tectonic`](https://tectonic-typesetting.github.io/) is preferred (single binary, fetches packages
-on demand); `pdflatex` works as a fallback.
+Requirements: Python 3.11+, [`uv`](https://docs.astral.sh/uv/), a LaTeX engine —
+[`tectonic`](https://tectonic-typesetting.github.io/) preferred (single binary, fetches packages on
+demand), `pdflatex` as fallback — and [Ollama](https://ollama.com) with any decent instruct model.
 
 ```bash
-brew install tectonic          # macOS; see tectonic docs for other platforms
+brew install tectonic ollama   # macOS; see the projects' docs for other platforms
+ollama pull llama3.1:8b        # or any model you like; auto-detected if already installed
+
 git clone https://github.com/vishalVasanthakumarPoornima/Resume-Tailor-ATS-Scorer.git
 cd Resume-Tailor-ATS-Scorer
-uv sync --extra dev
+uv sync
 
-cp .env.example .env           # then put your ANTHROPIC_API_KEY in it
-export ANTHROPIC_API_KEY=sk-ant-...
+# optional: headless-browser fallback for JS-heavy job pages
+uv sync --extra browser && uv run playwright install chromium
 ```
 
-The Anthropic API is used for (a) parsing your resume and the JD into structured data and
-(b) tailoring content. Scoring is **fully local** — no network, no LLM.
+**Everything runs locally by default — no API key needed.** The LLM steps (resume parsing, JD
+parsing, tailoring) use your local Ollama model with schema-constrained JSON output validated by
+Pydantic; scoring is deterministic Python. Because small local models can be sloppy, the pipeline
+adds deterministic guardrails: contact info is regex-recovered from the raw resume if the model
+drops it, and any JD skill that exists in your master profile is backfilled into the skills section
+if tailoring trimmed it (skills *not* in your profile are never added).
+
+Prefer a hosted model? The Anthropic backend is one env var away:
+
+```bash
+uv sync --extra anthropic
+export RESUME_FORGE_LLM_BACKEND=anthropic ANTHROPIC_API_KEY=sk-ant-...
+```
+
+Model/backend knobs (see `.env.example`): `RESUME_FORGE_LLM_BACKEND` (`ollama` default |
+`anthropic`), `RESUME_FORGE_MODEL`, `OLLAMA_HOST`, `RESUME_FORGE_OLLAMA_NUM_CTX`.
 
 ## CLI
 
@@ -50,7 +66,9 @@ uv run resume-forge --job "https://..." --job-text jd.txt --resume resume.pdf
 # Options
 #   --target 80           target ATS score (default 80)
 #   --max-iterations 5    cap on tailor→score rounds (default 5)
-#   --model <id>          override the Anthropic model (default claude-opus-4-8)
+#   --backend ollama      LLM backend: ollama (default) or anthropic
+#   --model <id>          model for the backend (e.g. llama3.1:8b or claude-opus-4-8)
+#   --no-browser          skip the headless-browser fallback for JS-heavy pages
 #   --no-cache            re-parse the master resume, ignoring the cache
 ```
 
@@ -108,12 +126,14 @@ Or in any MCP client config (stdio transport):
   "mcpServers": {
     "resume-forge": {
       "command": "uv",
-      "args": ["run", "--directory", "/path/to/Resume-Tailor-ATS-Scorer", "resume-forge-mcp"],
-      "env": { "ANTHROPIC_API_KEY": "sk-ant-..." }
+      "args": ["run", "--directory", "/path/to/Resume-Tailor-ATS-Scorer", "resume-forge-mcp"]
     }
   }
 }
 ```
+
+(Uses your local Ollama by default. To use Anthropic instead, add
+`"env": {"RESUME_FORGE_LLM_BACKEND": "anthropic", "ANTHROPIC_API_KEY": "sk-ant-..."}`.)
 
 Example agent usage: *"Tailor `~/resume.pdf` to this posting: <paste JD>"* → the agent calls
 `tailor_resume(job_url_or_text=..., master_resume_path=...)` and gets back the PDF path and report.
@@ -134,15 +154,18 @@ Report shape: `{score, subscores, max_subscores, missing_keywords, suggestions}`
 optimize iteration — while still respecting the no-fabrication rule, so keywords your profile
 can't truthfully support will remain missing (the report's `notes` call this out).
 
-## Scraping & Terms of Service — read this
+## Fetching job postings: fallback chain, scraping & ToS
+
+For URLs the fetch chain is: **plain HTTP GET → headless browser (Playwright, if the `browser`
+extra is installed) → pasted JD text**. The Playwright path exists for legitimately public but
+JS-rendered pages (many company career sites render the JD client-side).
 
 Many job boards (**LinkedIn, Indeed, Glassdoor**, and others) **prohibit automated scraping in
-their ToS** and actively block bots. resume-forge does a single polite HTTP GET with a normal
-browser user agent — no headless-browser evasion, no login, no retry hammering. For those sites,
-expect the fetch to fail; the supported path is to **paste the JD text** (`--job -` on stdin,
-`--job-text file`, or `job_description_text` in the API/MCP tools). Direct company career pages
-(Greenhouse, Lever, Ashby) usually fetch fine. A Playwright path for JS-heavy pages was
-deliberately left out for now — say the word if you want it added.
+their ToS** and actively block bots. resume-forge does a single polite fetch per attempt — no
+login automation, no CAPTCHA/bot-wall evasion, no retry hammering — so for those sites expect
+fetching to fail even with the browser fallback. The supported path there is to **paste the JD
+text** (`--job -` on stdin, `--job-text file`, or `job_description_text` in the API/MCP tools).
+Direct company career pages (Greenhouse, Lever, Ashby) usually fetch fine.
 
 ## Development
 
@@ -156,10 +179,10 @@ Layout:
 ```
 src/resume_forge/
   models.py        # Pydantic models (MasterProfile, Job, TailoredResume, ScoreReport, ...)
-  llm.py           # Anthropic wrapper: strict JSON via messages.parse + Pydantic validation
-  ingest.py        # step 1: resume file -> MasterProfile, cached by content hash
-  jobs.py          # step 2: URL/text -> Job (httpx + trafilatura/bs4, pasted-text fallback)
-  tailor.py        # step 3: tailoring + no-fabrication guard
+  llm.py           # LLM backends: Ollama (default, schema-constrained JSON) + Anthropic (opt-in)
+  ingest.py        # step 1: resume file -> MasterProfile, cached; regex contact backfill
+  jobs.py          # step 2: URL/text -> Job (httpx -> Playwright -> pasted-text fallback)
+  tailor.py        # step 3: tailoring + no-fabrication guard + truthful-skill backfill
   latex.py         # steps 4-5: escaping, Jinja template rendering, tectonic/pdflatex
   ats.py           # step 6: local scorer
   pipeline.py      # steps 7-8: optimize loop + forge() entry point
