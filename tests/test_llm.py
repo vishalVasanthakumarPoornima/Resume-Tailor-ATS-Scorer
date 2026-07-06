@@ -92,6 +92,16 @@ class TestOllamaParse:
         llm = OllamaLLM(http_client=_client(handler))
         assert llm.model == "llama3.1:8b-instruct-q4_K_M"
 
+    def test_auto_pick_prefers_light_model_over_heavy(self):
+        def handler(request):
+            return httpx.Response(
+                200,
+                json={"models": [{"name": "llama3.1:8b-instruct-q4_K_M"}, {"name": "qwen2.5:3b"}]},
+            )
+
+        llm = OllamaLLM(http_client=_client(handler))
+        assert llm.model == "qwen2.5:3b"
+
 
 class TestBackendSelection:
     def test_unknown_backend_rejected(self):

@@ -27,7 +27,17 @@ T = TypeVar("T", bound=BaseModel)
 DEFAULT_ANTHROPIC_MODEL = "claude-opus-4-8"
 DEFAULT_OLLAMA_HOST = "http://localhost:11434"
 # Tried in order when RESUME_FORGE_MODEL is unset; falls back to any installed model.
-PREFERRED_OLLAMA_MODELS = ("llama3.1", "qwen2.5:14b", "qwen2.5:7b", "mistral", "llama3")
+# Light-first: qwen2.5:3b (~2 GB) handles schema-constrained JSON well and leaves
+# the rest of the machine usable; heavier models only if no light one is installed.
+PREFERRED_OLLAMA_MODELS = (
+    "qwen2.5:3b",
+    "llama3.2:3b",
+    "qwen2.5:7b",
+    "llama3.1",
+    "qwen2.5:14b",
+    "mistral",
+    "llama3",
+)
 
 
 class LLM(Protocol):
@@ -50,7 +60,7 @@ class OllamaLLM:
         model: str | None = None,
         host: str | None = None,
         *,
-        num_ctx: int = 16384,
+        num_ctx: int = 8192,
         max_retries: int = 2,
         timeout: float = 600.0,
         http_client=None,
