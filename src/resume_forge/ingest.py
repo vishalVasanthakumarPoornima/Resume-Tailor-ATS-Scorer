@@ -12,7 +12,7 @@ from .llm import LLM, default_llm
 from .models import MasterProfile
 
 # Bump when the parsing prompt or schema changes so stale caches are ignored.
-PARSE_VERSION = "2"
+PARSE_VERSION = "3"
 
 INGEST_SYSTEM = """You are an expert resume parser. Extract the candidate's resume into the \
 provided schema, faithfully and completely.
@@ -68,6 +68,16 @@ _LINKEDIN_RE = re.compile(r"(?:www\.)?linkedin\.com/in/[\w-]+", re.IGNORECASE)
 _GITHUB_RE = re.compile(r"(?:www\.)?github\.com/[\w-]+", re.IGNORECASE)
 
 
+def _looks_gutted(profile: MasterProfile, text: str) -> bool:
+    """True when a non-trivial resume parsed into no substance at all."""
+    return (
+        len(text) > 600
+        and not profile.experience
+        and not profile.projects
+        and not profile.skills
+    )
+
+
 def _backfill_contact(profile: MasterProfile, text: str) -> MasterProfile:
     """Deterministically recover contact fields a (small) model may have dropped.
 
@@ -119,6 +129,39 @@ def ingest_master_resume(
         prompt=f"Parse this resume into the schema:\n\n<resume>\n{text}\n</resume>",
         output_type=MasterProfile,
     )
+
+    # Small models sometimes return schema-valid but EMPTY output (every field
+    # has a default, so `{}` validates). Never accept a gutted parse silently:
+    # retry, then escalate to the strongest installed model, then error loudly.
+    if _looks_gutted(profile, text):
+        profile = llm.parse(
+            system=INGEST_SYSTEM,
+            prompt=(
+                "Your previous parse of this resume was empty, which is wrong — the resume "
+                "clearly contains skills, experience, and/or projects sections. Parse it "
+                "again and extract EVERY entry and EVERY bullet completely.\n\n"
+                f"<resume>\n{text}\n</resume>"
+            ),
+            output_type=MasterProfile,
+        )
+    if _looks_gutted(profile, text):
+        from .llm import stronger_llm_for
+
+        stronger = stronger_llm_for(llm)
+        if stronger is not None:
+            profile = stronger.parse(
+                system=INGEST_SYSTEM,
+                prompt=f"Parse this resume into the schema:\n\n<resume>\n{text}\n</resume>",
+                output_type=MasterProfile,
+            )
+    if _looks_gutted(profile, text):
+        raise IngestError(
+            "The model could not extract skills/experience/projects from this resume "
+            "even though it contains substantial text. Try a stronger model "
+            "(e.g. `ollama pull qwen2.5:7b` and set RESUME_FORGE_INGEST_MODEL=qwen2.5:7b), "
+            "or convert the resume to .txt and retry."
+        )
+
     profile = _backfill_contact(profile, text)
 
     cache_dir.mkdir(parents=True, exist_ok=True)

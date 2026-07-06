@@ -58,7 +58,17 @@ def _jinja_env() -> Environment:
 def _contact_line(resume: TailoredResume) -> str:
     c = resume.contact
     parts = [c.location, c.phone, c.email, c.linkedin, c.github, c.website]
-    return r" $|$ ".join(escape_latex(p) for p in parts if p)
+    seen: set[str] = set()
+    unique = []
+    for part in parts:
+        if not part:
+            continue
+        key = part.strip().lower().removeprefix("https://").removeprefix("http://").rstrip("/")
+        if key in seen:
+            continue  # models sometimes copy the same value into two fields
+        seen.add(key)
+        unique.append(part)
+    return r" $|$ ".join(escape_latex(p) for p in unique)
 
 
 def render_tex(resume: TailoredResume, out_path: str | Path) -> Path:

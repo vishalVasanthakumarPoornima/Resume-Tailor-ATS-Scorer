@@ -22,9 +22,16 @@ class TestEnforceNoFabrication:
         sample_tailored.education.append(EducationItem(institution="MIT", degree="PhD"))
         sample_tailored.certifications.append("CISSP")
         cleaned, violations = enforce_no_fabrication(sample_tailored, sample_profile)
+        # education is always the master's, verbatim — invented MIT entry gone
         assert [e.institution for e in cleaned.education] == ["San Jose State University"]
         assert cleaned.certifications == ["AWS Certified Developer"]
-        assert len(violations) == 2
+        assert any("CISSP" in v for v in violations)
+
+    def test_education_never_reworded(self, sample_tailored, sample_profile):
+        # Model rephrased an in-progress degree as completed — must be discarded
+        sample_tailored.education[0].details = ["Completed a Master's degree in CS"]
+        cleaned, _ = enforce_no_fabrication(sample_tailored, sample_profile)
+        assert cleaned.education[0] == sample_profile.education[0]
 
     def test_contact_always_reset_to_master(self, sample_tailored, sample_profile):
         sample_tailored.contact.email = "invented@fake.com"
@@ -37,6 +44,52 @@ class TestEnforceNoFabrication:
         cleaned, violations = enforce_no_fabrication(sample_tailored, sample_profile)
         assert violations == []
         assert cleaned.experience[0].bullets == ["Engineered Python microservices at scale"]
+
+
+class TestFuzzyMatchingAndRestore:
+    def test_cosmetic_company_drift_is_not_dropped(self, sample_tailored, sample_profile):
+        # Model appended location to the employer name — must still match
+        sample_tailored.experience[0].company = "Acme Analytics, San Jose, CA"
+        cleaned, violations = enforce_no_fabrication(sample_tailored, sample_profile)
+        assert violations == []
+        assert cleaned.experience[0].company == "Acme Analytics, San Jose, CA"
+
+    def test_legal_suffix_drift_matches(self, sample_tailored, sample_profile):
+        sample_profile.experience[0].company = "Perficient, Inc."
+        sample_tailored.experience[0].company = "Perficient"
+        cleaned, violations = enforce_no_fabrication(sample_tailored, sample_profile)
+        assert violations == []
+        assert len(cleaned.experience) == 1
+
+    def test_omitted_employer_is_restored(self, sample_tailored, sample_profile):
+        # Model deleted the entire work history — the guard must put it back
+        sample_tailored.experience = []
+        cleaned, violations = enforce_no_fabrication(sample_tailored, sample_profile)
+        assert [e.company for e in cleaned.experience] == ["Acme Analytics"]
+        assert cleaned.experience[0].bullets == sample_profile.experience[0].bullets
+        assert any("Restored omitted employer" in v for v in violations)
+
+    def test_omitted_education_is_restored(self, sample_tailored, sample_profile):
+        sample_tailored.education = []
+        cleaned, violations = enforce_no_fabrication(sample_tailored, sample_profile)
+        assert [e.institution for e in cleaned.education] == ["San Jose State University"]
+
+    def test_all_projects_omitted_are_restored(self, sample_tailored, sample_profile):
+        sample_tailored.projects = []
+        cleaned, _ = enforce_no_fabrication(sample_tailored, sample_profile)
+        assert [p.name for p in cleaned.projects] == ["LogPipe"]
+
+    def test_empty_summary_falls_back_to_master(self, sample_tailored, sample_profile):
+        sample_tailored.summary = None
+        cleaned, _ = enforce_no_fabrication(sample_tailored, sample_profile)
+        assert cleaned.summary == sample_profile.summary
+
+    def test_genuinely_different_company_still_dropped(self, sample_tailored, sample_profile):
+        sample_tailored.experience[0].company = "Google"
+        cleaned, violations = enforce_no_fabrication(sample_tailored, sample_profile)
+        # Google dropped as invented, Acme restored from master
+        assert [e.company for e in cleaned.experience] == ["Acme Analytics"]
+        assert any("Dropped invented employer" in v for v in violations)
 
 
 class TestBackfillTruthfulSkills:

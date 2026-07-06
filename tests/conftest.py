@@ -17,7 +17,11 @@ from resume_forge.models import (
 
 
 class FakeLLM:
-    """Returns pre-registered objects keyed by output type; records prompts."""
+    """Returns pre-registered objects keyed by output type; records prompts.
+
+    A list value acts as a queue: successive calls for that type pop from the
+    front (the last element repeats), enabling retry-behavior tests.
+    """
 
     def __init__(self, responses: dict[type, object] | None = None):
         self.responses = responses or {}
@@ -26,9 +30,12 @@ class FakeLLM:
     def parse(self, *, system: str, prompt: str, output_type: type):
         self.calls.append({"system": system, "prompt": prompt, "output_type": output_type})
         try:
-            return self.responses[output_type]
+            value = self.responses[output_type]
         except KeyError:  # pragma: no cover
             raise AssertionError(f"FakeLLM has no response registered for {output_type}")
+        if isinstance(value, list):
+            return value.pop(0) if len(value) > 1 else value[0]
+        return value
 
 
 @pytest.fixture

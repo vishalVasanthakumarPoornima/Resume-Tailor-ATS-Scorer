@@ -39,12 +39,45 @@ PREFERRED_OLLAMA_MODELS = (
     "llama3",
 )
 
+# Quality-first order for the ONE-TIME resume ingest (result is cached, and the
+# model is unloaded immediately after via keep_alive=0, so a heavier model here
+# costs seconds once — not sustained memory or per-job latency).
+INGEST_PREFERRED_OLLAMA_MODELS = (
+    "qwen2.5:14b",
+    "qwen2.5:7b",
+    "llama3.1",
+    "llama3",
+    "mistral",
+    "qwen2.5:3b",
+    "llama3.2:3b",
+)
+
 
 class LLM(Protocol):
     """Anything that can turn a prompt into a validated Pydantic model."""
 
     def parse(self, *, system: str, prompt: str, output_type: type[T]) -> T:  # pragma: no cover
         ...
+
+
+def _require_all_properties(schema: object) -> None:
+    """Recursively mark every object property as required, in place.
+
+    Ollama's grammar-constrained decoding emits JSON keys in schema declaration
+    order and can only SKIP optional keys, never revisit them. If a resume lists
+    its sections in a different order than the schema (e.g. Education first),
+    the model skips everything "before" that point and silently drops skills /
+    experience / projects. Forcing every key to be present eliminates that
+    entire failure class — models emit empty arrays/nulls when truly absent.
+    """
+    if isinstance(schema, dict):
+        if isinstance(schema.get("properties"), dict):
+            schema["required"] = list(schema["properties"].keys())
+        for value in schema.values():
+            _require_all_properties(value)
+    elif isinstance(schema, list):
+        for value in schema:
+            _require_all_properties(value)
 
 
 class OllamaLLM:
@@ -63,6 +96,8 @@ class OllamaLLM:
         num_ctx: int = 8192,
         max_retries: int = 2,
         timeout: float = 600.0,
+        keep_alive: str | int | None = None,
+        prefer: tuple[str, ...] = PREFERRED_OLLAMA_MODELS,
         http_client=None,
     ):
         import httpx
@@ -72,6 +107,8 @@ class OllamaLLM:
             self.host = f"http://{self.host}"
         self.num_ctx = int(os.environ.get("RESUME_FORGE_OLLAMA_NUM_CTX", num_ctx))
         self.max_retries = max_retries
+        self.keep_alive = keep_alive
+        self._prefer = prefer
         self._client = http_client or httpx.Client(base_url=self.host, timeout=timeout)
         self.model = model or os.environ.get("RESUME_FORGE_MODEL") or self._pick_model()
 
@@ -95,7 +132,7 @@ class OllamaLLM:
             raise LLMError(
                 "No models installed in Ollama. Pull one first, e.g.: ollama pull llama3.1:8b"
             )
-        for preferred in PREFERRED_OLLAMA_MODELS:
+        for preferred in self._prefer:
             for name in models:
                 if name.startswith(preferred):
                     return name
@@ -107,6 +144,7 @@ class OllamaLLM:
         import httpx
 
         schema = output_type.model_json_schema()
+        _require_all_properties(schema)
         messages = [
             {"role": "system", "content": system},
             {
@@ -114,6 +152,15 @@ class OllamaLLM:
                 "content": f"{prompt}\n\nRespond ONLY with JSON matching the required schema.",
             },
         ]
+
+        # Size the context to the prompt so long resumes are never silently
+        # truncated (~3 chars/token heuristic + headroom for schema and output).
+        needed_ctx = (len(system) + len(prompt)) // 3 + 4096
+        num_ctx = max(self.num_ctx, min(32768, needed_ctx)) if needed_ctx > self.num_ctx else self.num_ctx
+
+        payload_extra: dict = {}
+        if self.keep_alive is not None:
+            payload_extra["keep_alive"] = self.keep_alive
 
         last_error: Exception | None = None
         for _attempt in range(self.max_retries + 1):
@@ -125,7 +172,8 @@ class OllamaLLM:
                         "messages": messages,
                         "stream": False,
                         "format": schema,
-                        "options": {"temperature": 0, "num_ctx": self.num_ctx},
+                        "options": {"temperature": 0, "num_ctx": num_ctx},
+                        **payload_extra,
                     },
                 )
                 response.raise_for_status()
@@ -214,3 +262,25 @@ def default_llm(backend: str | None = None, model: str | None = None) -> LLM:
     if backend == "ollama":
         return OllamaLLM(model=model)
     raise LLMError(f"Unknown LLM backend {backend!r}. Use 'ollama' or 'anthropic'.")
+
+
+def stronger_llm_for(base_llm: LLM) -> LLM | None:
+    """Return a stronger fallback LLM for a failed structured parse, or None.
+
+    Used by ingest as a last resort when a parse comes back empty: on Ollama it
+    picks the best installed model (quality-first order), with keep_alive=0 so
+    the heavier model unloads immediately after the single call. Override with
+    RESUME_FORGE_INGEST_MODEL. Non-Ollama backends have no escalation path.
+    """
+    if not isinstance(base_llm, OllamaLLM):
+        return None
+    override = os.environ.get("RESUME_FORGE_INGEST_MODEL")
+    stronger = OllamaLLM(
+        model=override,
+        host=base_llm.host,
+        keep_alive=0,
+        prefer=INGEST_PREFERRED_OLLAMA_MODELS,
+    )
+    if stronger.model == base_llm.model:
+        return None  # nothing stronger installed
+    return stronger

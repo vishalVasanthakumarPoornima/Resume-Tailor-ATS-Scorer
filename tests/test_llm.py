@@ -42,6 +42,28 @@ class TestOllamaParse:
         assert captured["format"]["properties"]["count"]["type"] == "integer"
         assert captured["options"]["temperature"] == 0
 
+    def test_all_properties_forced_required(self):
+        """Optional keys get skipped forever by Ollama's ordered grammar decoding —
+        every property (top-level and nested) must be marked required."""
+        from resume_forge.models import MasterProfile
+
+        captured = {}
+
+        def handler(request):
+            captured.update(json.loads(request.content))
+            return _chat_response(
+                '{"contact": {"name": "x", "email": null, "phone": null, "location": null,'
+                ' "linkedin": null, "github": null, "website": null}, "summary": null,'
+                ' "skills": [], "experience": [], "projects": [], "education": [], "certifications": []}'
+            )
+
+        llm = OllamaLLM(model="testmodel", http_client=_client(handler))
+        llm.parse(system="s", prompt="p", output_type=MasterProfile)
+        schema = captured["format"]
+        assert set(schema["required"]) == set(schema["properties"].keys())
+        exp = schema["$defs"]["ExperienceItem"]
+        assert set(exp["required"]) == set(exp["properties"].keys())
+
     def test_retries_on_invalid_then_succeeds(self):
         responses = ['{"name": "widget"}', '{"name": "widget", "count": 3}']
         calls = {"n": 0}

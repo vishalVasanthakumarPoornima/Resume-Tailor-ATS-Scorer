@@ -41,6 +41,27 @@ class TestContactBackfill:
         assert "555-0192" in profile.contact.phone
 
 
+class TestGuttedParseGuard:
+    def _empty_profile(self, sample_profile):
+        return sample_profile.model_copy(update={"skills": [], "experience": [], "projects": []})
+
+    def test_empty_parse_retried_then_accepted(self, sample_profile, tmp_path):
+        llm = FakeLLM({MasterProfile: [self._empty_profile(sample_profile), sample_profile]})
+        profile = ingest_master_resume(FIXTURES / "sample_resume.txt", llm=llm, cache_dir=tmp_path)
+        assert len(llm.calls) == 2
+        assert "was empty" in llm.calls[1]["prompt"]
+        assert profile.experience  # second attempt's content won
+
+    def test_persistently_empty_parse_raises(self, sample_profile, tmp_path):
+        import pytest
+
+        from resume_forge.exceptions import IngestError
+
+        llm = FakeLLM({MasterProfile: self._empty_profile(sample_profile)})
+        with pytest.raises(IngestError, match="stronger model"):
+            ingest_master_resume(FIXTURES / "sample_resume.txt", llm=llm, cache_dir=tmp_path)
+
+
 class TestCaching:
     def test_second_call_uses_cache_not_llm(self, sample_profile, tmp_path):
         llm = FakeLLM({MasterProfile: sample_profile})

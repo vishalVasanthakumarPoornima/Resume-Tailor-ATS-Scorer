@@ -37,9 +37,17 @@ uv sync --extra browser && uv run playwright install chromium
 **Everything runs locally by default — no API key needed.** The LLM steps (resume parsing, JD
 parsing, tailoring) use your local Ollama model with schema-constrained JSON output validated by
 Pydantic; scoring is deterministic Python. Because small local models can be sloppy, the pipeline
-adds deterministic guardrails: contact info is regex-recovered from the raw resume if the model
-drops it, and any JD skill that exists in your master profile is backfilled into the skills section
-if tailoring trimmed it (skills *not* in your profile are never added).
+adds deterministic guardrails:
+
+- every schema property is forced `required` for Ollama's grammar decoding, so a resume whose
+  sections are ordered differently than the schema can't get silently truncated;
+- an empty parse of a non-trivial resume is retried, then escalated to the strongest installed
+  model (`RESUME_FORGE_INGEST_MODEL` to override), then rejected loudly — never accepted;
+- contact info is regex-recovered from the raw resume if the model drops it;
+- tailoring can never delete your history: employers/education the model omits are restored from
+  the master profile (fuzzy-matched, so cosmetic name drift isn't treated as fabrication), and any
+  JD skill that exists in your profile is backfilled if trimmed. Skills, employers, degrees, and
+  certifications *not* in your profile are never added.
 
 Prefer a hosted model? The Anthropic backend is one env var away:
 

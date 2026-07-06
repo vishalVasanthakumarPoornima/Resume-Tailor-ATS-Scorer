@@ -9,6 +9,8 @@ Two layers of defense against invented content:
 from __future__ import annotations
 
 import json
+import re
+from difflib import SequenceMatcher
 
 from .llm import LLM, default_llm
 from .models import Job, MasterProfile, SkillGroup, TailoredResume
@@ -77,6 +79,36 @@ def _norm(value: str | None) -> str:
     return (value or "").strip().casefold()
 
 
+_CANON_STRIP = re.compile(r"[^a-z0-9 ]+")
+_CANON_SUFFIXES = (" inc", " llc", " ltd", " corp", " corporation", " co", " company")
+
+
+def _canon(value: str | None) -> str:
+    """Canonical form for fuzzy entity comparison: lowercase, no punctuation,
+    no legal suffixes, collapsed whitespace."""
+    out = _CANON_STRIP.sub(" ", _norm(value))
+    out = re.sub(r"\s+", " ", out).strip()
+    for suffix in _CANON_SUFFIXES:
+        if out.endswith(suffix):
+            out = out[: -len(suffix)].strip()
+    return out
+
+
+def _same_entity(a: str | None, b: str | None) -> bool:
+    """Fuzzy match for employer/school/project names.
+
+    Tolerates cosmetic drift a model introduces ('Perficient, Inc.' vs
+    'Perficient', 'Acme Analytics, San Jose, CA' vs 'Acme Analytics') without
+    accepting genuinely different entities.
+    """
+    ca, cb = _canon(a), _canon(b)
+    if not ca or not cb:
+        return False
+    if ca == cb or ca in cb or cb in ca:
+        return True
+    return SequenceMatcher(None, ca, cb).ratio() >= 0.8
+
+
 def backfill_truthful_skills(
     tailored: TailoredResume, profile: MasterProfile, job: Job
 ) -> tuple[TailoredResume, list[str]]:
@@ -119,49 +151,68 @@ def backfill_truthful_skills(
 def enforce_no_fabrication(
     tailored: TailoredResume, profile: MasterProfile
 ) -> tuple[TailoredResume, list[str]]:
-    """Drop tailored entries whose anchor facts don't exist in the master profile.
+    """Two-way structural guard against both fabrication AND content loss.
 
-    Returns the cleaned resume and a list of human-readable violations (empty if
-    the model behaved). Bullets are the model's responsibility (prompt-level rule);
-    this guard catches the structural fabrications: employers, schools, certs.
+    - Drops tailored entries whose anchor facts (employer/school/project/cert)
+      don't fuzzy-match anything in the master profile — the model may reword
+      bullets, never invent entities.
+    - RESTORES master experience and education entries the model omitted:
+      tailoring must never delete employment history or degrees. (Projects and
+      certifications may legitimately be trimmed for relevance, so those are
+      only restored wholesale if the model dropped ALL of them.)
+    Returns the cleaned resume and human-readable notes about what it fixed.
     """
     violations: list[str] = []
 
-    known_companies = {_norm(e.company) for e in profile.experience}
+    # --- experience: filter fabrications, then restore omissions ---
+    matched_master: set[int] = set()
     experience = []
     for item in tailored.experience:
-        if _norm(item.company) in known_companies:
+        match = next(
+            (i for i, m in enumerate(profile.experience) if _same_entity(item.company, m.company)),
+            None,
+        )
+        if match is not None:
+            matched_master.add(match)
             experience.append(item)
         else:
             violations.append(f"Dropped invented employer: {item.company!r}")
+    for i, master_item in enumerate(profile.experience):
+        if i not in matched_master:
+            experience.append(master_item.model_copy(deep=True))
+            violations.append(f"Restored omitted employer: {master_item.company!r}")
 
-    known_schools = {_norm(e.institution) for e in profile.education}
-    education = []
-    for item in tailored.education:
-        if _norm(item.institution) in known_schools:
-            education.append(item)
-        else:
-            violations.append(f"Dropped invented institution: {item.institution!r}")
+    # --- education: always verbatim from the master profile ---
+    # Rewording education adds nothing and risks implied falsehoods (e.g. an
+    # in-progress degree phrased as "Completed..."), so the model's version is
+    # discarded wholesale.
+    education = [item.model_copy(deep=True) for item in profile.education]
 
-    known_projects = {_norm(p.name) for p in profile.projects}
+    # --- projects: filter fabrications; restore only on total loss ---
     projects = []
     for item in tailored.projects:
-        if _norm(item.name) in known_projects:
+        if any(_same_entity(item.name, m.name) for m in profile.projects):
             projects.append(item)
         else:
             violations.append(f"Dropped invented project: {item.name!r}")
+    if not projects and profile.projects:
+        projects = [p.model_copy(deep=True) for p in profile.projects]
+        violations.append("Restored all projects (model omitted the section)")
 
-    known_certs = {_norm(c) for c in profile.certifications}
+    # --- certifications: filter fabrications; restore only on total loss ---
     certifications = []
     for cert in tailored.certifications:
-        if _norm(cert) in known_certs:
+        if any(_same_entity(cert, c) for c in profile.certifications):
             certifications.append(cert)
         else:
             violations.append(f"Dropped invented certification: {cert!r}")
+    if not certifications and profile.certifications:
+        certifications = list(profile.certifications)
 
     cleaned = tailored.model_copy(
         update={
             "contact": profile.contact,  # contact is never the model's to rewrite
+            "summary": tailored.summary or profile.summary,
             "experience": experience,
             "education": education,
             "projects": projects,
