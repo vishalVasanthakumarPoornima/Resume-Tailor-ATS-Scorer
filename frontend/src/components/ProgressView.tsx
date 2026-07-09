@@ -1,20 +1,19 @@
 import type { JobStatus } from '../lib/api'
 import ShinyText from '../blocks/ShinyText'
 
-const STAGES: { key: string[]; label: string; icon: string }[] = [
+const BASE_STAGES: { key: string[]; label: string; icon: string }[] = [
   { key: ['queued', 'ingest'], label: 'Parsing your resume', icon: '📄' },
   { key: ['job'], label: 'Analyzing the job posting', icon: '🔍' },
   { key: ['tailoring'], label: 'Tailoring & compiling LaTeX', icon: '⚒️' },
   { key: ['scoring'], label: 'Scoring against the ATS', icon: '🎯' },
 ]
 
-function stageIndex(stage: string): number {
-  const i = STAGES.findIndex(s => s.key.includes(stage))
-  return i === -1 ? STAGES.length : i
-}
+const COVER_STAGE = { key: ['cover'], label: 'Writing your cover letter', icon: '✍️' }
 
-export default function ProgressView({ job }: { job: JobStatus }) {
-  const current = stageIndex(job.stage)
+export default function ProgressView({ job, withCover = false }: { job: JobStatus; withCover?: boolean }) {
+  const STAGES = withCover ? [...BASE_STAGES, COVER_STAGE] : BASE_STAGES
+  const found = STAGES.findIndex(s => s.key.includes(job.stage))
+  const current = found === -1 ? STAGES.length : found
 
   return (
     <div className="mx-auto w-full max-w-md rounded-3xl border border-zinc-800/80 bg-zinc-900/60 p-8 backdrop-blur-md">

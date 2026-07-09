@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import SpotlightCard from '../blocks/SpotlightCard'
+import StarBorder from '../blocks/StarBorder'
 
 export interface ForgeParams {
   resume: File | null
@@ -7,6 +8,7 @@ export interface ForgeParams {
   jobInput: string
   target: number
   maxIterations: number
+  coverLetter: boolean
 }
 
 interface Props {
@@ -20,6 +22,7 @@ export default function ForgeForm({ onSubmit, disabled }: Props) {
   const [jobInput, setJobInput] = useState('')
   const [target, setTarget] = useState(80)
   const [maxIterations, setMaxIterations] = useState(5)
+  const [coverLetter, setCoverLetter] = useState(false)
   const [dragging, setDragging] = useState(false)
   const fileInput = useRef<HTMLInputElement>(null)
 
@@ -149,14 +152,26 @@ export default function ForgeForm({ onSubmit, disabled }: Props) {
             ))}
           </select>
         </label>
-        <button
+        <label className="flex cursor-pointer items-center gap-2 text-sm text-zinc-400">
+          <input
+            type="checkbox"
+            checked={coverLetter}
+            onChange={e => setCoverLetter(e.target.checked)}
+            className="h-4 w-4 rounded accent-indigo-500"
+          />
+          Cover letter ✍️
+        </label>
+        <StarBorder
+          as="button"
           type="button"
+          color="#818cf8"
+          speed="4s"
           disabled={!ready || disabled}
-          onClick={() => onSubmit({ resume, useSample, jobInput, target, maxIterations })}
-          className="ml-auto rounded-xl bg-indigo-600 px-8 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-600/25 transition-all hover:bg-indigo-500 hover:shadow-indigo-500/30 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
+          onClick={() => onSubmit({ resume, useSample, jobInput, target, maxIterations, coverLetter })}
+          className="ml-auto transition-opacity disabled:cursor-not-allowed disabled:opacity-40"
         >
-          Forge my resume ⚒️
-        </button>
+          <span className="px-2 text-sm font-semibold text-white">Forge my resume ⚒️</span>
+        </StarBorder>
       </div>
     </SpotlightCard>
   )

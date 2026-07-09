@@ -22,6 +22,12 @@ class TestEscapeLatex:
         assert escape_latex("") == ""
         assert escape_latex(None) == ""
 
+    def test_unicode_punctuation_transliterated(self):
+        # These chars silently vanish under T1 encoding if left as-is
+        assert escape_latex("Engineer — Initech") == "Engineer --- Initech"
+        assert escape_latex("2022–2024") == "2022--2024"
+        assert escape_latex("Initech’s “growth”…") == "Initech's ``growth''..."
+
 
 class TestRenderTex:
     def test_renders_escaped_content(self, sample_tailored, tmp_path):

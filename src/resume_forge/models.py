@@ -85,6 +85,15 @@ class TailoredResume(BaseModel):
     certifications: list[str] = Field(default_factory=list)
 
 
+class CoverLetter(BaseModel):
+    """Body of a cover letter. Salutation, date, and signature are added by the
+    template from verified data — the model only writes paragraphs."""
+
+    paragraphs: list[str] = Field(
+        description="3-4 body paragraphs, no salutation, no closing, no placeholders"
+    )
+
+
 class ScoreReport(BaseModel):
     score: float = Field(description="0-100 overall ATS score")
     subscores: dict[str, float] = Field(default_factory=dict)
@@ -100,3 +109,5 @@ class ForgeResult(BaseModel):
     iterations: int
     achieved_target: bool
     notes: list[str] = Field(default_factory=list)
+    cover_letter_pdf_path: str | None = None
+    cover_letter_tex_path: str | None = None

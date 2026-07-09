@@ -27,11 +27,31 @@ _SPECIALS = {
 }
 
 
+# Unicode punctuation that pdfTeX's T1 encoding drops silently — transliterate
+# to LaTeX-native ASCII first (all plain text, so the specials pass below is safe).
+_UNICODE_PUNCT = {
+    "—": "---",  # em dash
+    "–": "--",  # en dash
+    "’": "'",
+    "‘": "`",
+    "“": "``",
+    "”": "''",
+    "…": "...",
+    "•": "-",  # bullet char inside prose
+    " ": " ",  # non-breaking space
+    "​": "",  # zero-width space (common in PDF extractions)
+}
+
+
 def escape_latex(value: str) -> str:
-    """Escape LaTeX special characters: \\ % & _ # $ { } ~ ^."""
+    """Escape LaTeX special characters: \\ % & _ # $ { } ~ ^, and transliterate
+    Unicode punctuation that would otherwise vanish from the PDF."""
     if value is None:
         return ""
-    out = str(value).replace("\\", "\x00")
+    out = str(value)
+    for char, replacement in _UNICODE_PUNCT.items():
+        out = out.replace(char, replacement)
+    out = out.replace("\\", "\x00")
     for char, replacement in _SPECIALS.items():
         out = out.replace(char, replacement)
     return out.replace("\x00", r"\textbackslash{}")

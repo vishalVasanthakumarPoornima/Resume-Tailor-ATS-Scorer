@@ -2,7 +2,8 @@
 
 Given a job posting (URL or pasted text) and your existing resume, **resume-forge** produces an
 ATS-optimized, LaTeX-generated PDF resume tailored to that job, iterating against a **local ATS
-scorer** until it scores ≥ 80 (configurable), and returns the PDF plus a JSON score report.
+scorer** until it scores ≥ 80 (configurable), and returns the PDF plus a JSON score report —
+optionally with a matching **cover letter** grounded in the same no-fabrication rules.
 
 ![resume-forge web UI](docs/screenshot.png)
 
@@ -72,10 +73,16 @@ cd frontend && npm install && npm run dev
 ```
 
 Open http://localhost:5173: drag in your resume (or click "Try the sample"), paste a JD or
-posting URL, set the target score, and hit **Forge**. You get a live progress stepper while the
-pipeline runs, then an animated score dial, per-dimension breakdown, missing-keyword chips, and
-one-click PDF/.tex downloads. The UI uses [React Bits](https://reactbits.dev) components
-(Aurora background, SplitText, ShinyText, SpotlightCard, CountUp) over Tailwind.
+posting URL, set the target score, tick **Cover letter** if you want one, and hit **Forge**. You
+get a live progress stepper while the pipeline runs, then an animated score dial, per-dimension
+breakdown, missing-keyword chips, and one-click downloads (resume PDF, cover letter, .tex,
+report.json). The UI uses [React Bits](https://reactbits.dev) components (Aurora + Particles
+backgrounds, SplitText, ShinyText, GradientText, SpotlightCard, StarBorder, AnimatedContent,
+CountUp) over Tailwind.
+
+**Cover letters** follow the same grounding contract as tailoring: the model writes body
+paragraphs only (salutation, date, and signature come from verified data), bracketed placeholders
+and stray sign-offs are stripped, and every claim must come from your master profile.
 
 If the backend runs on a different port: `BACKEND_PORT=<port> npm run dev`.
 
@@ -102,6 +109,7 @@ uv run resume-forge --job "https://..." --job-text jd.txt --resume resume.pdf
 # Options
 #   --target 80           target ATS score (default 80)
 #   --max-iterations 5    cap on tailor→score rounds (default 5)
+#   --cover-letter        also generate a matching cover letter PDF
 #   --backend ollama      LLM backend: ollama (default) or anthropic
 #   --model <id>          model for the backend (e.g. llama3.1:8b or claude-opus-4-8)
 #   --no-browser          skip the headless-browser fallback for JS-heavy pages
@@ -219,6 +227,7 @@ src/resume_forge/
   ingest.py        # step 1: resume file -> MasterProfile, cached; regex contact backfill
   jobs.py          # step 2: URL/text -> Job (httpx -> Playwright -> pasted-text fallback)
   tailor.py        # step 3: tailoring + no-fabrication guard + truthful-skill backfill
+  cover.py         # optional: grounded cover letter (write -> render -> compile)
   latex.py         # steps 4-5: escaping, Jinja template rendering, tectonic/pdflatex
   ats.py           # step 6: local scorer
   pipeline.py      # steps 7-8: optimize loop + forge() entry point

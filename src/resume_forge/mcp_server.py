@@ -32,6 +32,7 @@ def tailor_resume(
     output_dir: str = "",
     job_description_text: str = "",
     max_iterations: int = 5,
+    include_cover_letter: bool = False,
 ) -> dict:
     """Tailor a resume to a job posting and return the PDF path plus a score report.
 
@@ -46,6 +47,8 @@ def tailor_resume(
         output_dir: Where to write the PDF/TeX/report. Defaults to a temp directory.
         job_description_text: Fallback JD text used if the URL cannot be fetched.
         max_iterations: Cap on tailor/score rounds.
+        include_cover_letter: Also generate a matching cover letter PDF (grounded,
+            same no-fabrication rule; path returned as cover_letter_pdf_path).
     """
     from .pipeline import forge
 
@@ -58,6 +61,7 @@ def tailor_resume(
             target_score=target_score,
             max_iterations=max_iterations,
             job_description_text=job_description_text or None,
+            cover_letter=include_cover_letter,
         )
     except ResumeForgeError as exc:
         return {"error": str(exc)}

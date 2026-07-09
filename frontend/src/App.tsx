@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
+import AnimatedContent from './blocks/AnimatedContent'
 import Aurora from './blocks/Aurora'
+import Particles from './blocks/Particles'
 import ShinyText from './blocks/ShinyText'
 import SplitText from './blocks/SplitText'
 import ForgeForm, { type ForgeParams } from './components/ForgeForm'
@@ -14,6 +16,7 @@ export default function App() {
   const [job, setJob] = useState<JobStatus | null>(null)
   const [error, setError] = useState('')
   const [health, setHealth] = useState<Health | null>(null)
+  const [withCover, setWithCover] = useState(false)
   const pollRef = useRef<number>()
 
   useEffect(() => {
@@ -24,10 +27,12 @@ export default function App() {
 
   const submit = async (params: ForgeParams) => {
     setError('')
+    setWithCover(params.coverLetter)
     const form = new FormData()
     form.set('job_input', params.jobInput)
     form.set('target', String(params.target))
     form.set('max_iterations', String(params.maxIterations))
+    if (params.coverLetter) form.set('include_cover_letter', 'true')
     if (params.useSample) form.set('use_sample_resume', 'true')
     else if (params.resume) form.set('resume', params.resume)
 
@@ -66,9 +71,20 @@ export default function App() {
 
   return (
     <div className="relative min-h-screen overflow-x-hidden">
-      {/* React Bits Aurora background */}
+      {/* React Bits Aurora + Particles background */}
       <div className="pointer-events-none fixed inset-0 opacity-60">
         <Aurora colorStops={['#4f46e5', '#0ea5e9', '#8b5cf6']} amplitude={1.1} blend={0.55} speed={0.7} />
+      </div>
+      <div className="pointer-events-none fixed inset-0 opacity-40">
+        <Particles
+          particleColors={['#a5b4fc', '#67e8f9']}
+          particleCount={140}
+          particleSpread={11}
+          speed={0.06}
+          particleBaseSize={70}
+          moveParticlesOnHover={false}
+          alphaParticles
+        />
       </div>
 
       <div className="relative z-10 mx-auto flex min-h-screen max-w-5xl flex-col px-4 py-6">
@@ -118,9 +134,16 @@ export default function App() {
 
         {/* Main */}
         <main className="flex flex-1 flex-col justify-start">
-          {phase === 'form' && <ForgeForm onSubmit={submit} />}
+          {phase === 'form' && (
+            <AnimatedContent distance={60} duration={0.9} delay={0.15}>
+              <ForgeForm onSubmit={submit} />
+            </AnimatedContent>
+          )}
           {phase === 'running' && (
-            <ProgressView job={job ?? ({ stage: 'queued', detail: 'Starting…' } as JobStatus)} />
+            <ProgressView
+              job={job ?? ({ stage: 'queued', detail: 'Starting…' } as JobStatus)}
+              withCover={withCover}
+            />
           )}
           {phase === 'done' && job && <ResultsView job={job} onReset={reset} />}
           {phase === 'error' && (

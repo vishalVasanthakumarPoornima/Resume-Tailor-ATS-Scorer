@@ -44,6 +44,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Model id for the backend (e.g. 'llama3.1:8b-instruct-q4_K_M' or 'claude-opus-4-8').",
     )
     parser.add_argument(
+        "--cover-letter",
+        action="store_true",
+        help="Also generate a matching cover letter PDF.",
+    )
+    parser.add_argument(
         "--no-browser",
         action="store_true",
         help="Skip the headless-browser fallback for JS-heavy job pages.",
@@ -90,6 +95,7 @@ def main(argv: list[str] | None = None) -> int:
             job_description_text=job_text_fallback,
             llm=llm,
             use_browser=not args.no_browser,
+            cover_letter=args.cover_letter,
         )
     except ResumeForgeError as exc:
         print(f"error: {exc}", file=sys.stderr)
@@ -108,6 +114,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"note: {note}")
     print(f"\nPDF:    {result.pdf_path}")
     print(f"TeX:    {result.tex_path}")
+    if result.cover_letter_pdf_path:
+        print(f"Cover:  {result.cover_letter_pdf_path}")
     print(f"Report: {Path(result.pdf_path).parent / 'score_report.json'}")
     return 0
 

@@ -125,8 +125,9 @@ def forge(
     job_description_text: str | None = None,
     llm: LLM | None = None,
     use_browser: bool = True,
+    cover_letter: bool = False,
 ) -> ForgeResult:
-    """End-to-end: ingest resume + extract job + optimize. The one-call API."""
+    """End-to-end: ingest resume + extract job + optimize (+ optional cover letter)."""
     llm = llm or default_llm()
     profile = ingest_master_resume(resume_path, llm=llm)
     job = extract_job(
@@ -135,7 +136,7 @@ def forge(
         llm=llm,
         use_browser=use_browser,
     )
-    return optimize(
+    result = optimize(
         profile,
         job,
         out_dir,
@@ -143,3 +144,14 @@ def forge(
         max_iterations=max_iterations,
         llm=llm,
     )
+    if cover_letter:
+        from .cover import generate_cover_letter
+
+        pdf_path, tex_path = generate_cover_letter(profile, job, out_dir, llm=llm)
+        result = result.model_copy(
+            update={"cover_letter_pdf_path": str(pdf_path), "cover_letter_tex_path": str(tex_path)}
+        )
+        (Path(out_dir) / "score_report.json").write_text(
+            result.model_dump_json(indent=2), encoding="utf-8"
+        )
+    return result

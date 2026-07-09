@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import type { JobStatus } from '../lib/api'
-import { pdfUrl, reportUrl, texUrl } from '../lib/api'
+import { coverLetterUrl, pdfUrl, reportUrl, texUrl } from '../lib/api'
+import AnimatedContent from '../blocks/AnimatedContent'
 import CountUp from '../blocks/CountUp'
+import GradientText from '../blocks/GradientText'
 import SpotlightCard from '../blocks/SpotlightCard'
 
 const SUBSCORE_LABELS: Record<string, string> = {
@@ -22,6 +24,7 @@ export default function ResultsView({ job, onReset }: { job: JobStatus; onReset:
 
   return (
     <div className="mx-auto w-full max-w-4xl space-y-6">
+      <AnimatedContent distance={50} duration={0.7}>
       <SpotlightCard
         className="!border-zinc-800/80 !bg-zinc-900/60 !p-8 backdrop-blur-md"
         spotlightColor="rgba(52, 211, 153, 0.12)"
@@ -52,9 +55,19 @@ export default function ResultsView({ job, onReset }: { job: JobStatus; onReset:
           </div>
 
           <div className="min-w-0 flex-1 text-center md:text-left">
-            <p className={`text-sm font-semibold uppercase tracking-wider ${hit ? 'text-emerald-400' : 'text-amber-400'}`}>
-              {hit ? 'Target reached' : 'Best effort — below target'}
-            </p>
+            {hit ? (
+              <GradientText
+                colors={['#34d399', '#22d3ee', '#34d399']}
+                animationSpeed={5}
+                className="!mx-0 text-sm font-semibold uppercase tracking-wider"
+              >
+                Target reached
+              </GradientText>
+            ) : (
+              <p className="text-sm font-semibold uppercase tracking-wider text-amber-400">
+                Best effort — below target
+              </p>
+            )}
             <h2 className="mt-1 truncate text-2xl font-bold text-zinc-100">
               {job.job_title ?? 'Tailored resume'}
               {job.job_company ? <span className="text-zinc-400"> · {job.job_company}</span> : null}
@@ -70,6 +83,15 @@ export default function ResultsView({ job, onReset }: { job: JobStatus; onReset:
               >
                 Download PDF ↓
               </a>
+              {result.cover_letter_pdf_path && (
+                <a
+                  href={coverLetterUrl(job.id)}
+                  download
+                  className="rounded-xl bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-600/25 transition-colors hover:bg-indigo-500"
+                >
+                  Cover letter ✍️
+                </a>
+              )}
               <a
                 href={texUrl(job.id)}
                 download
@@ -94,6 +116,7 @@ export default function ResultsView({ job, onReset }: { job: JobStatus; onReset:
           </div>
         </div>
       </SpotlightCard>
+      </AnimatedContent>
 
       <div className="grid gap-6 md:grid-cols-2">
         {/* Subscores */}

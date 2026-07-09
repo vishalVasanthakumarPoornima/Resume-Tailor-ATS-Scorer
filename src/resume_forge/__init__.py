@@ -11,6 +11,7 @@ tailor, render_tex, compile_pdf, score_ats, optimize.
 """
 
 from .ats import score_ats, score_resume_text
+from .cover import generate_cover_letter, render_cover_letter_tex, write_cover_letter
 from .exceptions import (
     IngestError,
     JobFetchError,
@@ -24,6 +25,7 @@ from .latex import compile_pdf, escape_latex, render_tex
 from .llm import LLM, AnthropicLLM, OllamaLLM, default_llm
 from .models import (
     Contact,
+    CoverLetter,
     EducationItem,
     ExperienceItem,
     ForgeResult,
@@ -42,6 +44,7 @@ __version__ = "0.1.0"
 __all__ = [
     "AnthropicLLM",
     "Contact",
+    "CoverLetter",
     "EducationItem",
     "ExperienceItem",
     "ForgeResult",
@@ -67,10 +70,13 @@ __all__ = [
     "fetch_job_posting",
     "fetch_job_posting_browser",
     "forge",
+    "generate_cover_letter",
     "ingest_master_resume",
     "optimize",
+    "render_cover_letter_tex",
     "render_tex",
     "score_ats",
+    "write_cover_letter",
     "score_resume_text",
     "tailor",
 ]

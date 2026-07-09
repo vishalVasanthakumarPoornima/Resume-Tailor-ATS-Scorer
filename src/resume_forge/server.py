@@ -53,6 +53,7 @@ def _run_job(
     target: float,
     max_iterations: int,
     workdir: Path,
+    include_cover_letter: bool,
 ) -> None:
     def on_progress(event: dict) -> None:
         if event["stage"] == "tailoring":
@@ -87,6 +88,17 @@ def _run_job(
             llm=llm,
             on_progress=on_progress,
         )
+        if include_cover_letter:
+            from .cover import generate_cover_letter
+
+            _update(job_id, stage="cover", detail="Writing your cover letter")
+            cover_pdf, cover_tex = generate_cover_letter(profile, job, workdir, llm=llm)
+            result = result.model_copy(
+                update={
+                    "cover_letter_pdf_path": str(cover_pdf),
+                    "cover_letter_tex_path": str(cover_tex),
+                }
+            )
         _update(
             job_id,
             status="done",
@@ -110,6 +122,7 @@ async def create_job(
     target: float = Form(80),
     max_iterations: int = Form(5),
     use_sample_resume: bool = Form(False),
+    include_cover_letter: bool = Form(False),
 ):
     if not job_input.strip():
         raise HTTPException(422, "job_input must be a job posting URL or the pasted JD text")
@@ -140,7 +153,16 @@ async def create_job(
         }
     threading.Thread(
         target=_run_job,
-        args=(job_id, resume_path, job_input, job_text_fallback or None, target, max_iterations, workdir),
+        args=(
+            job_id,
+            resume_path,
+            job_input,
+            job_text_fallback or None,
+            target,
+            max_iterations,
+            workdir,
+            include_cover_letter,
+        ),
         daemon=True,
     ).start()
     return {"job_id": job_id}
@@ -164,7 +186,10 @@ def _artifact(job_id: str, key: str, media_type: str, filename: str) -> FileResp
     result = job.get("result")
     if not result:
         raise HTTPException(409, "Job has not finished yet")
-    path = Path(result[key])
+    raw = result.get(key)
+    if not raw:
+        raise HTTPException(404, f"This job has no {filename}")
+    path = Path(raw)
     if not path.exists():
         raise HTTPException(410, "Artifact no longer exists on disk")
     return FileResponse(path, media_type=media_type, filename=filename)
@@ -178,6 +203,11 @@ def job_pdf(job_id: str):
 @app.get("/api/jobs/{job_id}/tex")
 def job_tex(job_id: str):
     return _artifact(job_id, "tex_path", "application/x-tex", "resume_tailored.tex")
+
+
+@app.get("/api/jobs/{job_id}/cover-letter")
+def job_cover_letter(job_id: str):
+    return _artifact(job_id, "cover_letter_pdf_path", "application/pdf", "cover_letter.pdf")
 
 
 @app.get("/api/jobs/{job_id}/report")

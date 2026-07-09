@@ -1,0 +1,43 @@
+% Cover letter — matches the resume's header for a consistent application packet.
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[hidelinks]{hyperref}
+\usepackage{parskip}
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.8em}
+
+\begin{document}
+
+\begin{center}
+    {\LARGE\bfseries \VAR{contact.name | tex}}\\[3pt]
+    \VAR{contact_line}
+\end{center}
+
+\vspace{0.5em}
+\hrule
+\vspace{1.5em}
+
+\VAR{date_line}
+
+\BLOCK{if job.company}
+\VAR{job.company | tex}\\
+\BLOCK{endif}
+Re: \VAR{job.title | tex}
+
+\vspace{0.5em}
+
+\VAR{salutation}
+
+\BLOCK{for para in letter.paragraphs}
+\VAR{para | tex}
+
+\BLOCK{endfor}
+\vspace{0.5em}
+
+Sincerely,\\[2pt]
+\VAR{contact.name | tex}
+
+\end{document}
