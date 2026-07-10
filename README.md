@@ -45,7 +45,7 @@ uv sync --extra browser && uv run playwright install chromium
 
 | Provider | Get a free key | Env var | Default model |
 |---|---|---|---|
-| **z.ai (GLM)** | https://z.ai/model-api | `ZAI_API_KEY` | `glm-4.5-flash` |
+| **z.ai (GLM)** | sign in at z.ai, then https://z.ai/manage-apikey/apikey-list | `ZAI_API_KEY` | `glm-4.5-flash` |
 | **Google Gemini** | https://aistudio.google.com/apikey | `GEMINI_API_KEY` | `gemini-2.5-flash` |
 | **Groq** | https://console.groq.com/keys | `GROQ_API_KEY` | `llama-3.3-70b-versatile` |
 
@@ -54,7 +54,8 @@ cp .env.example .env      # then paste ONE key into it — that's it
 ```
 
 Any OpenAI-compatible endpoint also works via `--backend openai` with `RESUME_FORGE_OPENAI_BASE_URL`
-+ `RESUME_FORGE_MODEL` + `RESUME_FORGE_API_KEY` (OpenRouter and Cerebras have presets too).
++ `RESUME_FORGE_MODEL` (+ `RESUME_FORGE_API_KEY` if it needs auth — a keyless/self-hosted endpoint
+works without one). OpenRouter and Cerebras have presets too.
 
 **Fully local — Ollama, no API key.** Used automatically when no cloud key is set:
 

@@ -203,13 +203,30 @@ class TestOpenAICompatParse:
     def test_missing_key_gives_signup_hint(self, monkeypatch):
         for var in ("ZAI_API_KEY", "GLM_API_KEY", "ZHIPU_API_KEY"):
             monkeypatch.delenv(var, raising=False)
-        with pytest.raises(LLMError, match=r"z\.ai.*z\.ai/model-api"):
+        with pytest.raises(LLMError, match=r"z\.ai.*manage-apikey"):
             OpenAICompatLLM(provider="zai")
 
     def test_generic_openai_needs_base_url(self, monkeypatch):
         monkeypatch.delenv("RESUME_FORGE_OPENAI_BASE_URL", raising=False)
         with pytest.raises(LLMError, match="base URL"):
             OpenAICompatLLM(provider="openai", api_key="k", model="x")
+
+    def test_generic_openai_allows_no_key(self, monkeypatch):
+        # keyless / self-hosted endpoints: no key, no Authorization header sent
+        for var in ("OPENAI_API_KEY", "RESUME_FORGE_API_KEY"):
+            monkeypatch.delenv(var, raising=False)
+        captured = {}
+
+        def handler(request):
+            captured["auth"] = request.headers.get("authorization")
+            return _oai_response('{"name": "x", "count": 1}')
+
+        client = httpx.Client(transport=httpx.MockTransport(handler), base_url="http://localhost:1234/v1")
+        llm = OpenAICompatLLM(
+            provider="openai", base_url="http://localhost:1234/v1", model="local", http_client=client
+        )
+        assert llm.parse(system="s", prompt="p", output_type=Answer).count == 1
+        assert captured["auth"] is None  # no auth header when keyless
 
 
 class TestBackendSelection:

@@ -84,7 +84,7 @@ OPENAI_COMPAT_PROVIDERS: dict[str, dict] = {
         "base_url": "https://api.z.ai/api/paas/v4",
         "model": "glm-4.5-flash",  # free; glm-4.7-flash also free
         "key_envs": ("ZAI_API_KEY", "GLM_API_KEY", "ZHIPU_API_KEY"),
-        "signup": "https://z.ai/model-api",
+        "signup": "https://z.ai/manage-apikey/apikey-list (sign in first)",
     },
     "gemini": {
         "label": "Google Gemini",
@@ -397,13 +397,15 @@ class OpenAICompatLLM:
             raise LLMError(f"No model set for backend {provider!r}. Set RESUME_FORGE_MODEL.")
 
         self.api_key = api_key or _find_api_key(preset["key_envs"])
-        if not self.api_key:
+        # Named cloud providers need a key; the generic 'openai' backend may point
+        # at a keyless / self-hosted endpoint, so a missing key is allowed there.
+        if not self.api_key and provider != "openai":
             envs = " or ".join(preset["key_envs"])
             signup = f" Get a free key at {preset['signup']}." if preset["signup"] else ""
             raise LLMError(f"No API key for {self.label}. Set {envs}.{signup}")
 
         self.max_retries = max_retries
-        self._auth_headers = {"Authorization": f"Bearer {self.api_key}"}
+        self._auth_headers = {"Authorization": f"Bearer {self.api_key}"} if self.api_key else {}
         self._client = http_client or httpx.Client(base_url=self.base_url, timeout=timeout)
 
     @staticmethod
