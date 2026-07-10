@@ -27,6 +27,17 @@ class TestEnforceNoFabrication:
         assert cleaned.certifications == ["AWS Certified Developer"]
         assert any("CISSP" in v for v in violations)
 
+    def test_certification_duplicated_as_project_is_removed(self, sample_tailored, sample_profile):
+        from resume_forge.models import ProjectItem
+
+        # A weak parser can echo a cert as a project; profile must list it as a cert.
+        sample_profile.projects.append(ProjectItem(name="AWS Certified Developer"))
+        sample_tailored.projects.append(ProjectItem(name="AWS Certified Developer"))
+        cleaned, violations = enforce_no_fabrication(sample_tailored, sample_profile)
+        assert [p.name for p in cleaned.projects] == ["LogPipe"]
+        assert "AWS Certified Developer" in cleaned.certifications
+        assert any("duplicated as a project" in v for v in violations)
+
     def test_education_never_reworded(self, sample_tailored, sample_profile):
         # Model rephrased an in-progress degree as completed — must be discarded
         sample_tailored.education[0].details = ["Completed a Master's degree in CS"]

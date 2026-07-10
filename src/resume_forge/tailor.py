@@ -209,6 +209,18 @@ def enforce_no_fabrication(
     if not certifications and profile.certifications:
         certifications = list(profile.certifications)
 
+    # A weak parser sometimes duplicates a certification as a "project" (e.g.
+    # "AWS Certified Developer"). If a project's name is exactly a certification,
+    # it's that mis-parse, not a real project — keep it only under Certifications.
+    cert_keys = {_norm(c) for c in certifications}
+    deduped_projects = []
+    for item in projects:
+        if _norm(item.name) in cert_keys:
+            violations.append(f"Removed certification duplicated as a project: {item.name!r}")
+        else:
+            deduped_projects.append(item)
+    projects = deduped_projects
+
     cleaned = tailored.model_copy(
         update={
             "contact": profile.contact,  # contact is never the model's to rewrite
