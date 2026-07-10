@@ -36,12 +36,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--backend",
-        choices=["ollama", "anthropic"],
-        help="LLM backend (default: env RESUME_FORGE_LLM_BACKEND, or local ollama).",
+        choices=["ollama", "anthropic", "zai", "glm", "gemini", "groq", "openrouter", "cerebras", "openai"],
+        help="LLM backend (default: a present cloud API key, else local ollama).",
     )
     parser.add_argument(
         "--model",
-        help="Model id for the backend (e.g. 'llama3.1:8b-instruct-q4_K_M' or 'claude-opus-4-8').",
+        help="Model id for the backend (e.g. 'glm-4.5-flash', 'gemini-2.5-flash', or 'qwen2.5:3b').",
     )
     parser.add_argument(
         "--cover-letter",

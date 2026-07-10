@@ -22,7 +22,7 @@ from .exceptions import (
 from .ingest import extract_resume_text, ingest_master_resume
 from .jobs import extract_job, fetch_job_posting, fetch_job_posting_browser
 from .latex import compile_pdf, escape_latex, render_tex
-from .llm import LLM, AnthropicLLM, OllamaLLM, default_llm
+from .llm import LLM, AnthropicLLM, OllamaLLM, OpenAICompatLLM, default_llm
 from .models import (
     Contact,
     CoverLetter,
@@ -56,6 +56,7 @@ __all__ = [
     "LatexError",
     "MasterProfile",
     "OllamaLLM",
+    "OpenAICompatLLM",
     "ProjectItem",
     "ResumeForgeError",
     "ScoreReport",

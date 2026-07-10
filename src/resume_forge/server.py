@@ -227,7 +227,9 @@ def health():
     info: dict = {"status": "ok"}
     try:
         llm = default_llm()
-        info["backend"] = type(llm).__name__.removesuffix("LLM").lower()
+        info["backend"] = getattr(llm, "label", None) or getattr(llm, "provider", None) or type(
+            llm
+        ).__name__.removesuffix("LLM").lower()
         info["model"] = getattr(llm, "model", None)
     except ResumeForgeError as exc:
         info["status"] = "degraded"
