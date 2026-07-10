@@ -1,9 +1,12 @@
 # resume-forge
 
 Given a job posting (URL or pasted text) and your existing resume, **resume-forge** produces an
-ATS-optimized, LaTeX-generated PDF resume tailored to that job, iterating against a **local ATS
-scorer** until it scores ≥ 80 (configurable), and returns the PDF plus a JSON score report —
-optionally with a matching **cover letter** grounded in the same no-fabrication rules.
+ATS-optimized, LaTeX-generated **one-page** PDF resume tailored to that job, iterating against a
+**local ATS scorer** until it scores ≥ 80 (configurable), and returns the PDF plus a JSON score
+report — optionally with a matching **cover letter** grounded in the same no-fabrication rules.
+
+Runs on a **free cloud model** (z.ai/GLM, Gemini, Groq — seconds per call) or **fully local**
+(Ollama, no key). Any OpenAI-compatible endpoint works, so it drops into your other projects too.
 
 ![resume-forge web UI](docs/screenshot.png)
 
@@ -21,14 +24,12 @@ doesn't exist in your master resume, and always restores your real contact info.
 
 ## Setup
 
-Requirements: Python 3.11+, [`uv`](https://docs.astral.sh/uv/), a LaTeX engine —
+Requirements: Python 3.11+, [`uv`](https://docs.astral.sh/uv/), and a LaTeX engine —
 [`tectonic`](https://tectonic-typesetting.github.io/) preferred (single binary, fetches packages on
-demand), `pdflatex` as fallback — and [Ollama](https://ollama.com) with any decent instruct model.
+demand), `pdflatex` as fallback.
 
 ```bash
-brew install tectonic ollama   # macOS; see the projects' docs for other platforms
-ollama pull llama3.1:8b        # or any model you like; auto-detected if already installed
-
+brew install tectonic          # macOS; see tectonic's docs for other platforms
 git clone https://github.com/vishalVasanthakumarPoornima/Resume-Tailor-ATS-Scorer.git
 cd Resume-Tailor-ATS-Scorer
 uv sync
@@ -37,10 +38,33 @@ uv sync
 uv sync --extra browser && uv run playwright install chromium
 ```
 
-**Everything runs locally by default — no API key needed.** The LLM steps (resume parsing, JD
-parsing, tailoring) use your local Ollama model with schema-constrained JSON output validated by
-Pydantic; scoring is deterministic Python. Because small local models can be sloppy, the pipeline
-adds deterministic guardrails:
+### Pick a model backend
+
+**Fastest — a free cloud model (recommended).** Grab one free API key, drop it in a `.env` file
+(or export it), and resume-forge auto-detects it. Seconds per call, nothing to run locally:
+
+| Provider | Get a free key | Env var | Default model |
+|---|---|---|---|
+| **z.ai (GLM)** | https://z.ai/model-api | `ZAI_API_KEY` | `glm-4.5-flash` |
+| **Google Gemini** | https://aistudio.google.com/apikey | `GEMINI_API_KEY` | `gemini-2.5-flash` |
+| **Groq** | https://console.groq.com/keys | `GROQ_API_KEY` | `llama-3.3-70b-versatile` |
+
+```bash
+cp .env.example .env      # then paste ONE key into it — that's it
+```
+
+Any OpenAI-compatible endpoint also works via `--backend openai` with `RESUME_FORGE_OPENAI_BASE_URL`
++ `RESUME_FORGE_MODEL` + `RESUME_FORGE_API_KEY` (OpenRouter and Cerebras have presets too).
+
+**Fully local — Ollama, no API key.** Used automatically when no cloud key is set:
+
+```bash
+brew install ollama && ollama pull qwen2.5:3b   # auto-detected; light + fast
+```
+
+The LLM steps (resume/JD parsing, tailoring) request schema-constrained JSON validated by Pydantic;
+scoring is deterministic Python. Because small local models can be sloppy, the pipeline adds
+deterministic guardrails:
 
 - every schema property is forced `required` for Ollama's grammar decoding, so a resume whose
   sections are ordered differently than the schema can't get silently truncated;
@@ -52,15 +76,16 @@ adds deterministic guardrails:
   JD skill that exists in your profile is backfilled if trimmed. Skills, employers, degrees, and
   certifications *not* in your profile are never added.
 
-Prefer a hosted model? The Anthropic backend is one env var away:
+Backend selection: a present cloud key wins, else local Ollama. Force it with
+`RESUME_FORGE_LLM_BACKEND` (`zai | glm | gemini | groq | openrouter | cerebras | openai | ollama |
+anthropic`) or `--backend`; pick the model with `RESUME_FORGE_MODEL` or `--model`. See `.env.example`.
 
-```bash
-uv sync --extra anthropic
-export RESUME_FORGE_LLM_BACKEND=anthropic ANTHROPIC_API_KEY=sk-ant-...
-```
+### Always one page
 
-Model/backend knobs (see `.env.example`): `RESUME_FORGE_LLM_BACKEND` (`ollama` default |
-`anthropic`), `RESUME_FORGE_MODEL`, `OLLAMA_HOST`, `RESUME_FORGE_OLLAMA_NUM_CTX`.
+Every resume is fitted to a **single page**: the renderer compiles at progressively compact spacing
+(10pt → 9pt, tighter margins) and picks the first setting that fits. Only if a resume still overflows
+at the tightest setting does it trim the lowest-priority content — extra bullets, then trailing
+projects — **never** an employer, degree, or contact detail, so it can shorten without leaving gaps.
 
 ## Web app
 

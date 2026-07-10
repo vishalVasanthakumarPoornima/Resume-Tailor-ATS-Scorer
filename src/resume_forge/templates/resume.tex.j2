@@ -1,23 +1,24 @@
-% ATS-friendly resume: single column, standard fonts, real text only.
-% No graphics, no multi-column, no tables for content.
-\documentclass[10.5pt]{article}
-\usepackage[margin=0.55in]{geometry}
+% ATS-friendly resume: single column, single-sided, standard fonts, real text only.
+% No graphics, no multi-column, no tables for content. Spacing is driven by the
+% `d` (density) dict so the renderer can fit everything onto one page.
+\documentclass[\VAR{d.cls_size}pt,oneside]{extarticle}
+\usepackage[margin=\VAR{d.margin}]{geometry}
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 \usepackage{enumitem}
 \usepackage{titlesec}
 \usepackage[hidelinks]{hyperref}
-\usepackage{parskip}
 \pagestyle{empty}
 \setlength{\parindent}{0pt}
-\titleformat{\section}{\large\bfseries\scshape}{}{0em}{}[\vspace{-6pt}\rule{\textwidth}{0.4pt}]
-\titlespacing*{\section}{0pt}{8pt}{4pt}
-\setlist[itemize]{leftmargin=1.1em, itemsep=1pt, parsep=0pt, topsep=2pt, label=\textbullet}
+\setlength{\parskip}{\VAR{d.parskip}}
+\titleformat{\section}{\large\bfseries\scshape}{}{0em}{}[\vspace{\VAR{d.rule_gap}}\rule{\textwidth}{0.4pt}]
+\titlespacing*{\section}{0pt}{\VAR{d.sec_before}}{\VAR{d.sec_after}}
+\setlist[itemize]{leftmargin=1.1em, itemsep=\VAR{d.itemsep}, parsep=0pt, topsep=\VAR{d.topsep}, label=\textbullet}
 
 \begin{document}
 
 \begin{center}
-    {\LARGE\bfseries \VAR{r.contact.name | tex}}\\[3pt]
+    {\VAR{d.name_size}\bfseries \VAR{r.contact.name | tex}}\\[2pt]
     \VAR{contact_line}
 \end{center}
 

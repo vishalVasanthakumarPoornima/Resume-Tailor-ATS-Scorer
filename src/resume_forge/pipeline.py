@@ -43,22 +43,33 @@ def optimize(
     tailor_fn=None,
     render_fn=None,
     compile_fn=None,
+    build_fn=None,
     score_fn=None,
     on_progress=None,
 ) -> ForgeResult:
     """Tailor → render → compile → score, iterating on scorer feedback until
     ``target_score`` is reached or ``max_iterations`` is exhausted.
 
+    The build step produces a guaranteed one-page PDF (density fit + trim). By
+    default it uses :func:`resume_forge.latex.build_one_page_pdf`; passing the
+    legacy ``render_fn`` + ``compile_fn`` composes them instead (used by tests).
+
     Returns the best iteration even if the target was never reached, with notes
-    explaining what is still missing. The ``*_fn`` hooks exist for testing.
+    explaining what is still missing.
     """
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     llm = llm or default_llm()
     tailor_fn = tailor_fn or (lambda p, j, feedback: tailor_module.tailor(p, j, feedback=feedback, llm=llm))
-    render_fn = render_fn or latex_module.render_tex
-    compile_fn = compile_fn or latex_module.compile_pdf
     score_fn = score_fn or ats_module.score_ats
+
+    if build_fn is None:
+        if render_fn is not None or compile_fn is not None:
+            _render = render_fn or latex_module.render_tex
+            _compile = compile_fn or latex_module.compile_pdf
+            build_fn = lambda tailored, tex_path: _compile(_render(tailored, tex_path))  # noqa: E731
+        else:
+            build_fn = latex_module.build_one_page_pdf
 
     notes: list[str] = []
     best: tuple[float, Path, Path, ScoreReport] | None = None
@@ -73,8 +84,8 @@ def optimize(
         _, violations = tailor_module.enforce_no_fabrication(tailored, profile)
         notes.extend(f"iteration {iteration}: {v}" for v in violations)
 
-        tex_path = render_fn(tailored, out_dir / f"resume_iter{iteration}.tex")
-        pdf_path = compile_fn(tex_path)
+        tex_path = out_dir / f"resume_iter{iteration}.tex"
+        pdf_path = build_fn(tailored, tex_path)
         report = score_fn(pdf_path, job)
 
         if best is None or report.score > best[0]:
