@@ -252,3 +252,20 @@ class TestBackendSelection:
         llm = default_llm()
         assert isinstance(llm, OpenAICompatLLM)
         assert llm.provider == "gemini"
+
+    def test_puter_backend_uses_free_glm_endpoint(self, monkeypatch):
+        # Free GLM with a Puter token — no z.ai key involved
+        monkeypatch.setenv("PUTER_API_KEY", "puter-token")
+        llm = default_llm("puter")
+        assert isinstance(llm, OpenAICompatLLM)
+        assert llm.provider == "puter"
+        assert "api.puter.com" in llm.base_url
+        assert llm.model == "z-ai/glm-4.5-flash"
+
+    def test_puter_autodetected_from_token(self, monkeypatch):
+        for var in ("ZAI_API_KEY", "GLM_API_KEY", "ZHIPU_API_KEY", "GEMINI_API_KEY",
+                    "GOOGLE_API_KEY", "GROQ_API_KEY"):
+            monkeypatch.delenv(var, raising=False)
+        monkeypatch.delenv("RESUME_FORGE_LLM_BACKEND", raising=False)
+        monkeypatch.setenv("PUTER_AUTH_TOKEN", "t")
+        assert default_llm().provider == "puter"

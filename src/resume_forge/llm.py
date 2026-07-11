@@ -114,6 +114,16 @@ OPENAI_COMPAT_PROVIDERS: dict[str, dict] = {
         "key_envs": ("CEREBRAS_API_KEY",),
         "signup": "https://cloud.cerebras.ai",
     },
+    # Puter: free GLM (and many other models) with NO z.ai key. You make one
+    # free Puter token (no per-call z.ai key, GLM is free through Puter). Puter
+    # now captcha-gates fully anonymous use, so a one-time token is required.
+    "puter": {
+        "label": "Puter (free GLM, no z.ai key)",
+        "base_url": "https://api.puter.com/puterai/openai/v1",
+        "model": "z-ai/glm-4.5-flash",
+        "key_envs": ("PUTER_API_KEY", "PUTER_AUTH_TOKEN"),
+        "signup": "https://puter.com/dashboard → API tokens → Create token (free account)",
+    },
     # Generic escape hatch: any OpenAI-compatible endpoint. Requires
     # RESUME_FORGE_OPENAI_BASE_URL + RESUME_FORGE_MODEL (+ a key env).
     "openai": {
@@ -127,7 +137,7 @@ OPENAI_COMPAT_PROVIDERS: dict[str, dict] = {
 
 # Priority order for auto-detecting a backend from a present API key. z.ai first
 # (the documented default), then the other strong free tiers.
-_AUTODETECT_ORDER = ("zai", "gemini", "groq", "openrouter", "cerebras")
+_AUTODETECT_ORDER = ("zai", "gemini", "groq", "puter", "openrouter", "cerebras")
 
 # Friendly aliases accepted for RESUME_FORGE_LLM_BACKEND / --backend.
 _PROVIDER_ALIASES = {"glm": "zai", "zhipu": "zai", "z.ai": "zai", "google": "gemini"}

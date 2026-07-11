@@ -48,10 +48,20 @@ uv sync --extra browser && uv run playwright install chromium
 | **z.ai (GLM)** | sign in at z.ai, then https://z.ai/manage-apikey/apikey-list | `ZAI_API_KEY` | `glm-4.5-flash` |
 | **Google Gemini** | https://aistudio.google.com/apikey | `GEMINI_API_KEY` | `gemini-2.5-flash` |
 | **Groq** | https://console.groq.com/keys | `GROQ_API_KEY` | `llama-3.3-70b-versatile` |
+| **Puter (free GLM, no z.ai key)** | free Puter account → https://puter.com/dashboard → API tokens → Create token | `PUTER_API_KEY` | `z-ai/glm-4.5-flash` |
 
 ```bash
 cp .env.example .env      # then paste ONE key into it — that's it
 ```
+
+**Want free GLM without a z.ai key?** Use the **Puter** backend. Puter resells GLM (and many
+other models) for free through its own OpenAI-compatible endpoint. You make one free Puter token
+(no z.ai signup, no per-call key, GLM is free) at
+[puter.com/dashboard](https://puter.com/dashboard) → **API tokens → Create token**, then
+`echo "PUTER_API_KEY=your-token" >> .env`. Note: Puter's *fully keyless* browser SDK
+(`puter.js`) is browser-only and now captcha-gates anonymous accounts, so server-side use needs
+that one free token. Since your resume is personal data, prefer a token you control (z.ai, Gemini,
+or Puter) over anonymous public proxies.
 
 Any OpenAI-compatible endpoint also works via `--backend openai` with `RESUME_FORGE_OPENAI_BASE_URL`
 + `RESUME_FORGE_MODEL` (+ `RESUME_FORGE_API_KEY` if it needs auth — a keyless/self-hosted endpoint

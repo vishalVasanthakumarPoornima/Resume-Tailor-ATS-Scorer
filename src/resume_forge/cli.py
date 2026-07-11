@@ -36,7 +36,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--backend",
-        choices=["ollama", "anthropic", "zai", "glm", "gemini", "groq", "openrouter", "cerebras", "openai"],
+        choices=["ollama", "anthropic", "zai", "glm", "gemini", "groq", "puter", "openrouter", "cerebras", "openai"],
         help="LLM backend (default: a present cloud API key, else local ollama).",
     )
     parser.add_argument(
