@@ -10,6 +10,10 @@ Runs on a **free cloud model** (z.ai/GLM, Gemini, Groq — seconds per call) or 
 
 ![resume-forge web UI](docs/screenshot.png)
 
+**Docs:** [Technical White Paper (PDF)](docs/resume-forge-whitepaper.pdf) — architecture, the
+no-fabrication guarantee, ATS scoring methodology, and the multi-provider inference strategy,
+in one document.
+
 Four layers, all in this repo:
 
 1. **`resume_forge`** — a core Python package with a clean programmatic API
