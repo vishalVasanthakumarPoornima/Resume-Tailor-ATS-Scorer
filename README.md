@@ -12,7 +12,8 @@ Runs on a **free cloud model** (z.ai/GLM, Gemini, Groq — seconds per call) or 
 
 **Docs:** [Technical White Paper (PDF)](docs/resume-forge-whitepaper.pdf) — architecture, the
 no-fabrication guarantee, ATS scoring methodology, and the multi-provider inference strategy,
-in one document.
+in one document. Also: a one-page [Project Showcase](docs/resume-forge-one-pager.pdf)
+([.docx](docs/resume-forge-one-pager.docx)) summary.
 
 Four layers, all in this repo:
 
