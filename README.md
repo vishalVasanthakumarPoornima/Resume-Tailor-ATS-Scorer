@@ -127,7 +127,16 @@ and stray sign-offs are stripped, and every claim must come from your master pro
 
 If the backend runs on a different port: `BACKEND_PORT=<port> npm run dev`.
 
-**Production mode (single command):** build the frontend once and the backend serves it directly —
+**Easiest — `./start.sh`** handles everything (deps, frontend build, launch):
+
+```bash
+./start.sh                # whole app at http://127.0.0.1:8756
+./start.sh --dev          # + Vite dev server w/ hot reload on :5173
+./start.sh --port 9000    # different port
+./start.sh --rebuild      # force a fresh frontend build
+```
+
+**Production mode (manual):** build the frontend once and the backend serves it directly —
 
 ```bash
 cd frontend && npm install && npm run build && cd ..
