@@ -100,7 +100,7 @@ export default function App() {
             ) : health.status === 'ok' ? (
               <>
                 <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-emerald-500 align-middle" />
-                local · {health.backend} · <span className="font-mono">{health.model}</span>
+                {health.backend} · <span className="font-mono">{health.model}</span>
               </>
             ) : (
               <>
@@ -125,7 +125,7 @@ export default function App() {
               to={{ opacity: 1, y: 0 }}
             />
             <p className="mx-auto mt-5 max-w-xl text-zinc-400">
-              Drop in your resume and a job posting. A local model rewrites for the role —{' '}
+              Drop in your resume and a job posting. An AI model rewrites for the role —{' '}
               <span className="text-zinc-200">never inventing experience</span> — compiles a clean LaTeX PDF, and
               iterates until it beats the ATS score target.
             </p>
@@ -162,7 +162,7 @@ export default function App() {
         </main>
 
         <footer className="mt-16 pb-2 text-center text-xs text-zinc-700">
-          100% local · Ollama + tectonic · deterministic ATS scorer · no fabrication, guaranteed by code
+          LaTeX + tectonic · deterministic ATS scorer · no fabrication, guaranteed by code
         </footer>
       </div>
     </div>

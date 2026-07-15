@@ -5,7 +5,7 @@ ATS-optimized, LaTeX-generated **one-page** PDF resume tailored to that job, ite
 **local ATS scorer** until it scores ≥ 80 (configurable), and returns the PDF plus a JSON score
 report — optionally with a matching **cover letter** grounded in the same no-fabrication rules.
 
-Runs on a **free cloud model** (z.ai/GLM, Gemini, Groq — seconds per call) or **fully local**
+Runs on a **free cloud model** (Groq, z.ai/GLM, Gemini — a full run takes ~8s) or **fully local**
 (Ollama, no key). Any OpenAI-compatible endpoint works, so it drops into your other projects too.
 
 ![resume-forge web UI](docs/screenshot.png)

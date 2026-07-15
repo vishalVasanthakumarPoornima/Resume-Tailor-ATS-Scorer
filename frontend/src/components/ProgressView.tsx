@@ -54,7 +54,7 @@ export default function ProgressView({ job, withCover = false }: { job: JobStatu
         </p>
       )}
       <p className="mt-4 text-center text-[11px] text-zinc-700">
-        Running locally on your machine — a small model takes ~30s, larger ones a few minutes.
+        Usually about 10 seconds on a cloud model — a few minutes if you're running one locally.
       </p>
     </div>
   )
