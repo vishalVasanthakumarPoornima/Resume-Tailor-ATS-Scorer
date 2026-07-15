@@ -50,14 +50,29 @@ uv sync --extra browser && uv run playwright install chromium
 
 | Provider | Get a free key | Env var | Default model |
 |---|---|---|---|
+| **Groq** ⭐ recommended | https://console.groq.com/keys | `GROQ_API_KEY` | `llama-3.3-70b-versatile` |
 | **z.ai (GLM)** | sign in at z.ai, then https://z.ai/manage-apikey/apikey-list | `ZAI_API_KEY` | `glm-4.5-flash` |
 | **Google Gemini** | https://aistudio.google.com/apikey | `GEMINI_API_KEY` | `gemini-2.5-flash` |
-| **Groq** | https://console.groq.com/keys | `GROQ_API_KEY` | `llama-3.3-70b-versatile` |
 | **Puter (free GLM, no z.ai key)** | free Puter account → https://puter.com/dashboard → API tokens → Create token | `PUTER_API_KEY` | `z-ai/glm-4.5-flash` |
 
 ```bash
 cp .env.example .env      # then paste ONE key into it — that's it
 ```
+
+**Why Groq is the default pick** (measured on this project, not marketing claims):
+
+| Backend | Full resume parse | Whole pipeline (resume + cover letter) |
+|---|---|---|
+| **Groq** | **~1.2s** | **~8s** |
+| Puter (GLM-4.5-flash) | ~70s | ~70s+, frequently times out |
+| Local Ollama (qwen2.5:3b) | ~70s | 1–3 min, saturates your CPU |
+
+Groq needs no billing setup, and its free tier (~14.4k requests/day) far exceeds the 4–6 calls a
+run costs. Two gotchas worth knowing: **Puter's** GLM-4.5-flash is a *reasoning* model that spends
+its token budget "thinking", so it times out on large schema-constrained prompts — it's the
+last-resort auto-detect pick for that reason. And **Gemini** keys created under a project with
+prepay billing attached have no free tier (`429: prepayment credits are depleted`); free-tier keys
+start with `AIza`.
 
 **Want free GLM without a z.ai key?** Use the **Puter** backend. Puter resells GLM (and many
 other models) for free through its own OpenAI-compatible endpoint. You make one free Puter token

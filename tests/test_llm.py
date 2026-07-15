@@ -245,13 +245,24 @@ class TestBackendSelection:
         assert default_llm("glm").provider == "zai"
 
     def test_autodetect_prefers_present_cloud_key(self, monkeypatch):
-        for var in ("ZAI_API_KEY", "GLM_API_KEY", "ZHIPU_API_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY"):
-            monkeypatch.delenv(var, raising=False)
-        monkeypatch.delenv("RESUME_FORGE_LLM_BACKEND", raising=False)
+        # env is already cleared by the autouse _isolate_env fixture
         monkeypatch.setenv("GEMINI_API_KEY", "k")
         llm = default_llm()
         assert isinstance(llm, OpenAICompatLLM)
         assert llm.provider == "gemini"
+
+    def test_groq_wins_autodetect_when_several_keys_present(self, monkeypatch):
+        # Groq is preferred: measured fastest, free, no reasoning-token burn.
+        for var in ("GROQ_API_KEY", "GEMINI_API_KEY", "PUTER_API_KEY", "ZAI_API_KEY"):
+            monkeypatch.setenv(var, "k")
+        assert default_llm().provider == "groq"
+
+    def test_puter_is_last_resort_in_autodetect(self, monkeypatch):
+        # GLM-4.5-flash via Puter is a reasoning model that times out on big
+        # schema prompts, so anything else present should win over it.
+        monkeypatch.setenv("PUTER_API_KEY", "k")
+        monkeypatch.setenv("CEREBRAS_API_KEY", "k")
+        assert default_llm().provider == "cerebras"
 
     def test_puter_backend_uses_free_glm_endpoint(self, monkeypatch):
         # Free GLM with a Puter token — no z.ai key involved
@@ -263,9 +274,18 @@ class TestBackendSelection:
         assert llm.model == "z-ai/glm-4.5-flash"
 
     def test_puter_autodetected_from_token(self, monkeypatch):
-        for var in ("ZAI_API_KEY", "GLM_API_KEY", "ZHIPU_API_KEY", "GEMINI_API_KEY",
-                    "GOOGLE_API_KEY", "GROQ_API_KEY"):
-            monkeypatch.delenv(var, raising=False)
-        monkeypatch.delenv("RESUME_FORGE_LLM_BACKEND", raising=False)
+        # env is already cleared by the autouse _isolate_env fixture
         monkeypatch.setenv("PUTER_AUTH_TOKEN", "t")
         assert default_llm().provider == "puter"
+
+    def test_real_dotenv_never_leaks_into_tests(self):
+        # Regression: default_llm() calls load_env_file(), which setdefaults keys
+        # from the developer's real .env, so backend-selection tests silently
+        # depended on which keys happened to be in that file. The autouse
+        # _isolate_env fixture stubs the loader; with no key set, selection must
+        # fall back to Ollama regardless of what .env holds on this machine.
+        # Assert on the selection logic itself -- constructing an OllamaLLM would
+        # hit the local Ollama server over the network.
+        from resume_forge.llm import _auto_backend
+
+        assert _auto_backend() == "ollama"

@@ -4,6 +4,42 @@ from __future__ import annotations
 
 import pytest
 
+# Provider key env vars that would otherwise leak into backend-selection tests.
+_PROVIDER_KEY_ENVS = (
+    "RESUME_FORGE_LLM_BACKEND",
+    "RESUME_FORGE_MODEL",
+    "RESUME_FORGE_API_KEY",
+    "RESUME_FORGE_OPENAI_BASE_URL",
+    "ZAI_API_KEY",
+    "GLM_API_KEY",
+    "ZHIPU_API_KEY",
+    "GEMINI_API_KEY",
+    "GOOGLE_API_KEY",
+    "GROQ_API_KEY",
+    "PUTER_API_KEY",
+    "PUTER_AUTH_TOKEN",
+    "OPENROUTER_API_KEY",
+    "CEREBRAS_API_KEY",
+    "OPENAI_API_KEY",
+    "ANTHROPIC_API_KEY",
+)
+
+
+@pytest.fixture(autouse=True)
+def _isolate_env(monkeypatch):
+    """Keep tests hermetic.
+
+    ``default_llm()`` calls ``load_env_file()``, which setdefaults keys from the
+    developer's real .env -- so without this, backend-selection tests quietly
+    depend on which API keys happen to be sitting in that file (they passed only
+    while no GROQ key existed, then broke the moment one was added). Stub the
+    loader and clear provider keys so every test sees the same empty environment,
+    matching CI, where no .env exists.
+    """
+    monkeypatch.setattr("resume_forge.llm.load_env_file", lambda *a, **k: None)
+    for var in _PROVIDER_KEY_ENVS:
+        monkeypatch.delenv(var, raising=False)
+
 from resume_forge.models import (
     Contact,
     EducationItem,

@@ -34,8 +34,11 @@ command -v uv >/dev/null || die "uv is not installed. Install it: https://docs.a
 command -v tectonic >/dev/null || warn "tectonic not found — PDF compilation will fail. Install: brew install tectonic"
 
 # ── Python deps ──────────────────────────────────────────────────────────────
+# --inexact: install what's needed to RUN the app without pruning anything else
+# already in the venv. Plain `uv sync` removes packages outside the default
+# deps, which silently uninstalls the dev extras (pytest) on every start.
 info "Syncing Python dependencies…"
-uv sync --quiet
+uv sync --inexact --quiet
 
 # ── Frontend build (skipped when already current, or in --dev mode) ───────────
 if [[ $DEV -eq 0 ]]; then

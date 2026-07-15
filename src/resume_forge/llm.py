@@ -135,9 +135,12 @@ OPENAI_COMPAT_PROVIDERS: dict[str, dict] = {
     },
 }
 
-# Priority order for auto-detecting a backend from a present API key. z.ai first
-# (the documented default), then the other strong free tiers.
-_AUTODETECT_ORDER = ("zai", "gemini", "groq", "puter", "openrouter", "cerebras")
+# Priority order for auto-detecting a backend from a present API key.
+# Groq first: measured fastest by a wide margin (~1s for a full resume parse vs
+# ~70s via Puter/GLM), free with no billing setup, and no reasoning-token burn.
+# Puter last of the free tier: GLM-4.5-flash is a reasoning model that spends its
+# budget "thinking", which times out on large schema-constrained prompts.
+_AUTODETECT_ORDER = ("groq", "zai", "gemini", "openrouter", "cerebras", "puter")
 
 # Friendly aliases accepted for RESUME_FORGE_LLM_BACKEND / --backend.
 _PROVIDER_ALIASES = {"glm": "zai", "zhipu": "zai", "z.ai": "zai", "google": "gemini"}
