@@ -50,7 +50,7 @@ export default function ResultsView({ job, onReset }: { job: JobStatus; onReset:
               <div className={`text-5xl font-extrabold ${ring}`}>
                 <CountUp to={report.score} duration={1.2} />
               </div>
-              <div className="text-xs text-zinc-500">ATS score / 100</div>
+              <div className="text-xs text-zinc-300">ATS score / 100</div>
             </div>
           </div>
 
@@ -72,7 +72,7 @@ export default function ResultsView({ job, onReset }: { job: JobStatus; onReset:
               {job.job_title ?? 'Tailored resume'}
               {job.job_company ? <span className="text-zinc-400"> · {job.job_company}</span> : null}
             </h2>
-            <p className="mt-1 text-sm text-zinc-500">
+            <p className="mt-1 text-sm text-zinc-300">
               {result.iterations} iteration{result.iterations === 1 ? '' : 's'} · target {job.target}
             </p>
             <div className="mt-5 flex flex-wrap justify-center gap-3 md:justify-start">
@@ -108,7 +108,7 @@ export default function ResultsView({ job, onReset }: { job: JobStatus; onReset:
               </a>
               <button
                 onClick={onReset}
-                className="rounded-xl border border-zinc-800 px-6 py-2.5 text-sm text-zinc-500 transition-colors hover:border-zinc-600 hover:text-zinc-300"
+                className="rounded-xl border border-zinc-800 px-6 py-2.5 text-sm text-zinc-300 transition-colors hover:border-zinc-600 hover:text-zinc-300"
               >
                 Start over
               </button>
@@ -130,7 +130,7 @@ export default function ResultsView({ job, onReset }: { job: JobStatus; onReset:
                 <div key={name}>
                   <div className="mb-1 flex justify-between text-xs">
                     <span className="text-zinc-400">{SUBSCORE_LABELS[name] ?? name}</span>
-                    <span className="font-mono text-zinc-500">
+                    <span className="font-mono text-zinc-300">
                       {value}/{max}
                     </span>
                   </div>
@@ -172,13 +172,13 @@ export default function ResultsView({ job, onReset }: { job: JobStatus; onReset:
           </ul>
           {result.notes.length > 0 && (
             <div className="mt-4 border-t border-zinc-800 pt-3">
-              <button onClick={() => setShowNotes(v => !v)} className="text-xs text-zinc-600 hover:text-zinc-400">
+              <button onClick={() => setShowNotes(v => !v)} className="text-xs text-zinc-400 hover:text-zinc-400">
                 {showNotes ? '▾' : '▸'} pipeline notes ({result.notes.length})
               </button>
               {showNotes && (
                 <ul className="mt-2 space-y-1">
                   {result.notes.map(n => (
-                    <li key={n} className="text-xs text-zinc-600">
+                    <li key={n} className="text-xs text-zinc-400">
                       {n}
                     </li>
                   ))}

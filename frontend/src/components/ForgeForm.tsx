@@ -78,13 +78,13 @@ export default function ForgeForm({ onSubmit, disabled }: Props) {
               <>
                 <span className="text-2xl">📄</span>
                 <p className="mt-2 max-w-full truncate text-sm font-medium text-emerald-300">{resume.name}</p>
-                <p className="mt-1 text-xs text-zinc-500">Click to replace</p>
+                <p className="mt-1 text-xs text-zinc-300">Click to replace</p>
               </>
             ) : useSample ? (
               <>
                 <span className="text-2xl">🧪</span>
                 <p className="mt-2 text-sm font-medium text-emerald-300">Using the bundled sample resume</p>
-                <p className="mt-1 text-xs text-zinc-500">Click to upload your own instead</p>
+                <p className="mt-1 text-xs text-zinc-300">Click to upload your own instead</p>
               </>
             ) : (
               <>
@@ -92,7 +92,7 @@ export default function ForgeForm({ onSubmit, disabled }: Props) {
                 <p className="mt-2 text-sm text-zinc-400">
                   Drop your resume here or <span className="text-indigo-400">browse</span>
                 </p>
-                <p className="mt-1 text-xs text-zinc-600">PDF · DOCX · TeX · TXT · MD</p>
+                <p className="mt-1 text-xs text-zinc-400">PDF · DOCX · TeX · TXT · MD</p>
               </>
             )}
           </div>
@@ -102,7 +102,7 @@ export default function ForgeForm({ onSubmit, disabled }: Props) {
               setUseSample(true)
               setResume(null)
             }}
-            className="mt-2 text-xs text-zinc-500 underline-offset-2 hover:text-indigo-400 hover:underline"
+            className="mt-2 text-xs text-zinc-300 underline-offset-2 hover:text-indigo-400 hover:underline"
           >
             No resume handy? Try the sample
           </button>
@@ -115,9 +115,9 @@ export default function ForgeForm({ onSubmit, disabled }: Props) {
             value={jobInput}
             onChange={e => setJobInput(e.target.value)}
             placeholder={'Paste the job description here…\n\n…or drop in a posting URL (https://…)'}
-            className="h-40 w-full resize-none rounded-2xl border border-zinc-700 bg-zinc-900/40 p-3 text-sm text-zinc-200 placeholder-zinc-600 outline-none transition-colors focus:border-indigo-500"
+            className="h-40 w-full resize-none rounded-2xl border border-zinc-700 bg-zinc-900/40 p-3 text-sm text-zinc-200 placeholder-zinc-400 outline-none transition-colors focus:border-indigo-500"
           />
-          <p className="mt-2 text-xs text-zinc-600">
+          <p className="mt-2 text-xs text-zinc-400">
             Job boards that block bots (LinkedIn, Indeed…)? Paste the text — it always works.
           </p>
         </div>

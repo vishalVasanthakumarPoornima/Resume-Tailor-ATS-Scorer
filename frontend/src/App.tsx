@@ -94,18 +94,24 @@ export default function App() {
             <span className="text-xl">⚒️</span>
             <ShinyText text="resume-forge" speed={4} className="text-lg font-bold tracking-tight" />
           </button>
-          <div className="text-right text-xs text-zinc-600">
+          {/* Status pill: a subtle backdrop keeps it legible over the Aurora,
+              which shifts between dark and bright behind this corner. */}
+          <div className="rounded-full border border-zinc-700/60 bg-zinc-900/70 px-3 py-1.5 text-right text-xs text-zinc-100 backdrop-blur-sm">
             {health === null ? (
               'connecting…'
             ) : health.status === 'ok' ? (
               <>
-                <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-emerald-500 align-middle" />
-                {health.backend} · <span className="font-mono">{health.model}</span>
+                <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-emerald-400 align-middle" />
+                <span className="font-semibold">{health.backend}</span>
+                <span className="mx-1 text-zinc-500">·</span>
+                <span className="font-mono text-indigo-300">{health.model}</span>
               </>
             ) : (
               <>
-                <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-rose-500 align-middle" />
-                {health.llm_error ? 'LLM unavailable' : 'backend offline'}
+                <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-rose-400 align-middle" />
+                <span className="font-medium text-rose-300">
+                  {health.llm_error ? 'LLM unavailable' : 'backend offline'}
+                </span>
               </>
             )}
           </div>
@@ -161,8 +167,9 @@ export default function App() {
           )}
         </main>
 
-        <footer className="mt-16 pb-2 text-center text-xs text-zinc-700">
-          LaTeX + tectonic · deterministic ATS scorer · no fabrication, guaranteed by code
+        <footer className="mt-16 pb-2 text-center text-xs font-medium text-zinc-300">
+          LaTeX + tectonic · deterministic ATS scorer ·{' '}
+          <span className="text-emerald-400">no fabrication, guaranteed by code</span>
         </footer>
       </div>
     </div>
